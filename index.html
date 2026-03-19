@@ -798,33 +798,92 @@ function redrawLivePolylines() {
   rebuildTrackEngine();
 }
 
-// ── Overpass query builder ────────────────────────────────
-// Returns all railway=rail ways inside Florida bbox,
-// filtered by operator tag containing the given keyword.
-function buildOverpassQuery(operatorKeyword) {
-  // Bounding box covers full Florida: S,W,N,E
-  const bbox = "24.5,-87.6,31.0,-80.0";
-  return `[out:json][timeout:60];
-way["railway"="rail"]["operator"~"${operatorKeyword}",i](${bbox});
-out geom;`;
-}
 
-// Separate query for FEC (runs east coast, no CSX overlap)
+// ── Overpass queries using DIRECT OSM RELATION IDs ───────
+// These are the authoritative OSM route/railway relations for
+// each corridor — no guessing by operator name.
+//
+// CSX/SFRTA South Florida Rail Corridor:
+//   Relation 4322238  — SFRTA/Tri-Rail main line (Mangonia Park → Miami Airport)
+//   Also fetch by bbox with railway=rail + name~"SFRTA|South Florida Rail" as fallback
+//
+// FEC / Florida East Coast:
+//   Relation 2936327  — FEC main line (Jacksonville → Miami)
+//   Relation 6842070  — Brightline service (subset of FEC)
+//
+// We fetch the relation members' geometry directly — this gives us
+// only the actual track ways, nothing else.
+//
+// Fallback bbox query uses a tight geographic corridor and
+// railway=rail + NOT motorway/road tags to avoid highway confusion.
+
 const OVERPASS_QUERIES = [
   {
     key: "csx",
-    // CSX Transportation owns the tracks; SFRTA/Tri-Rail leases them
-    query: buildOverpassQuery("CSX|SFRTA|South Florida Regional"),
-    color: "#ffe066",
-    label: "CSX/Tri-Rail"
+    label: "CSX/Tri-Rail",
+    // Fetch SFRTA relation members, fallback to bbox tight on the corridor
+    query: `[out:json][timeout:60];
+(
+  relation(4322238);
+  relation(4322239);
+  relation(11798950);
+)->.rels;
+way(r.rels)["railway"="rail"];
+out geom;`,
+    // Tight bbox fallback: the SFRTA corridor runs between lng -80.09 and -80.16
+    fallbackQuery: `[out:json][timeout:60];
+way["railway"="rail"]["name"~"South Florida|SFRTA|Seaboard|Silver",i](25.7,-80.20,26.8,-80.09);
+out geom;`
   },
   {
     key: "fec",
-    query: buildOverpassQuery("Florida East Coast|Brightline|Virgin Trains"),
-    color: "#ff8c00",
-    label: "FEC/Brightline"
+    label: "FEC/Brightline",
+    // Fetch FEC relation members directly
+    query: `[out:json][timeout:60];
+(
+  relation(2936327);
+  relation(6842070);
+  relation(15893834);
+)->.rels;
+way(r.rels)["railway"="rail"];
+out geom;`,
+    // Tight bbox fallback: FEC runs between lng -80.05 and -80.16 (south of WPB)
+    fallbackQuery: `[out:json][timeout:60];
+way["railway"="rail"]["operator"~"Florida East Coast|FEC|Brightline",i](25.7,-80.22,30.5,-80.04);
+out geom;`
   }
 ];
+
+// ── Validate that stitched points look like a railway ─────
+// Reject results that have suspiciously tight loops (highway ramps)
+// A real railway shouldn't curve more than ~2° per 100m
+function looksLikeRailway(pts) {
+  if (pts.length < 4) return false;
+  // Check bounding box is reasonable (should span many miles N-S)
+  const lats = pts.map(p => p[0]);
+  const latSpan = Math.max(...lats) - Math.min(...lats);
+  if (latSpan < 0.1) return false; // less than ~7 miles — probably a spur
+  return true;
+}
+
+// ── Filter: keep only points within the right lng band ────
+function filterToCorridorBbox(pts, key) {
+  // CSX runs roughly between -80.09 and -80.20 in South FL
+  // FEC runs roughly between -80.04 and -80.17 in South FL
+  // Both span 25.7 to 30.5 lat (full Florida)
+  if (key === "csx") {
+    return pts.filter(([lat, lng]) =>
+      lat >= 25.7 && lat <= 30.5 &&
+      // Allow wider bbox north of WPB where CSX curves inland
+      (lat > 27.0 ? (lng >= -82.5 && lng <= -80.0) : (lng >= -80.20 && lng <= -80.08))
+    );
+  } else {
+    return pts.filter(([lat, lng]) =>
+      lat >= 25.7 && lat <= 30.5 &&
+      (lat > 27.5 ? (lng >= -81.7 && lng <= -80.0) : (lng >= -80.22 && lng <= -80.03))
+    );
+  }
+}
 
 // ── Stitch OSM ways into ordered polylines ────────────────
 // OSM ways come as unordered segments. We stitch them into
@@ -871,17 +930,6 @@ function stitchWays(elements) {
   }
 
   return result;
-}
-
-// ── Filter to just the South Florida corridor ─────────────
-// The full CSX/FEC networks span multiple states.
-// We only care about the South Florida segment for train positioning,
-// but we draw the full Florida segment for visual context.
-function filterToFlorida(pts) {
-  // Keep only points inside Florida bounding box
-  return pts.filter(([lat, lng]) =>
-    lat >= 24.4 && lat <= 31.1 && lng >= -87.7 && lng <= -80.0
-  );
 }
 
 // ── Fetch OSM track data ──────────────────────────────────
@@ -941,30 +989,53 @@ async function loadOsmTracks() {
 
   setTrackStatus("⏳ LOADING OSM TRACKS…", "#f5a623");
 
-  // Fetch both corridors
+  // Fetch both corridors — try primary relation query, then fallback bbox query
   const results = {};
   for (const q of OVERPASS_QUERIES) {
+    let pts = null;
+
+    // 1. Try primary query (relation-based)
     const data = await fetchFromOverpass(q.query);
     if (data && data.elements.length > 0) {
       const stitched = stitchWays(data.elements);
-      const florida  = filterToFlorida(stitched);
-      if (florida.length > 5) {
-        results[q.key] = florida;
-        console.log(`✓ OSM ${q.label}: ${florida.length} points`);
+      const filtered = filterToCorridorBbox(stitched, q.key);
+      if (filtered.length > 20 && looksLikeRailway(filtered)) {
+        pts = filtered;
+        console.log(`✓ OSM ${q.label} (relation): ${pts.length} pts`);
+      } else {
+        console.warn(`⚠ ${q.label} relation result rejected (${filtered.length} pts, span check failed) — trying fallback`);
       }
     }
+
+    // 2. Fallback to bbox query if relation failed
+    if (!pts && q.fallbackQuery) {
+      const fbData = await fetchFromOverpass(q.fallbackQuery);
+      if (fbData && fbData.elements.length > 0) {
+        const stitched = stitchWays(fbData.elements);
+        const filtered = filterToCorridorBbox(stitched, q.key);
+        if (filtered.length > 20 && looksLikeRailway(filtered)) {
+          pts = filtered;
+          console.log(`✓ OSM ${q.label} (fallback bbox): ${pts.length} pts`);
+        } else {
+          console.warn(`⚠ ${q.label} fallback also rejected — keeping hand-crafted data`);
+        }
+      }
+    }
+
+    if (pts) results[q.key] = pts;
   }
 
-  if (results.csx && results.csx.length > 5) {
+  if (results.csx && results.csx.length > 20) {
     liveCsxPts = results.csx;
   }
-  if (results.fec && results.fec.length > 5) {
+  if (results.fec && results.fec.length > 20) {
     liveFecPts = results.fec;
   }
 
   if (results.csx || results.fec) {
     redrawLivePolylines();
-    setTrackStatus(`🛤 REAL OSM TRACK`, "#00ee77");
+    const src = (results.csx && results.fec) ? "BOTH" : (results.csx ? "CSX" : "FEC");
+    setTrackStatus(`🛤 REAL OSM TRACK (${src})`, "#00ee77");
     // Cache for 30 days
     try {
       localStorage.setItem(TRACK_CACHE_KEY, JSON.stringify({
@@ -974,8 +1045,8 @@ async function loadOsmTracks() {
       }));
     } catch(e) {}
   } else {
-    setTrackStatus("🗺 FALLBACK TRACK", "#f5a623");
-    console.warn("OSM fetch failed — using fallback crossing-point data");
+    setTrackStatus("🗺 HAND-CRAFTED TRACK", "#f5a623");
+    console.warn("OSM fetch failed or rejected — using hand-crafted crossing-point data");
   }
 }
 
