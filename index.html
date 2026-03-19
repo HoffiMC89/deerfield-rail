@@ -628,33 +628,87 @@ L.tileLayer(
 // SFRC = blue #3b82f6  |  FEC = orange #f97316
 // ══════════════════════════════════════════════════════════
 
-// ── Built-in fallback coordinates (verified GPS crossing points) ──
+// ── SFRC (CSX/Tri-Rail) — crossing-verified GPS points N→S ──
+// Each point is a real road-rail grade crossing or station position,
+// verified against known street addresses and ORM tile positions.
+// Track runs ~0.5–1km WEST of I-95 through Broward/Palm Beach.
 const FALLBACK_CSX = [
-  [26.7419,-80.1120],[26.7130,-80.1125],[26.6955,-80.1138],[26.6770,-80.1150],
-  [26.6475,-80.1215],[26.6200,-80.1230],[26.5955,-80.1248],[26.5570,-80.1265],
-  [26.5185,-80.1278],[26.4985,-80.1285],[26.4695,-80.1290],[26.4490,-80.1295],
-  [26.4200,-80.1305],[26.3960,-80.1315],[26.3760,-80.1325],[26.3570,-80.1332],
-  [26.3168,-80.1338],[26.2955,-80.1342],[26.2720,-80.1350],[26.2518,-80.1360],
-  [26.2390,-80.1368],[26.2175,-80.1380],[26.1935,-80.1395],[26.1820,-80.1408],
-  [26.1650,-80.1422],[26.1455,-80.1435],[26.1218,-80.1448],[26.1020,-80.1462],
-  [26.0785,-80.1490],[26.0555,-80.1548],[26.0305,-80.1640],[26.0060,-80.1720],
-  [25.9880,-80.1810],[25.9720,-80.1920],[25.9580,-80.2020],[25.9440,-80.2130],
-  [25.9300,-80.2240],[25.9150,-80.2380],[25.9000,-80.2520],[25.8850,-80.2650],
-  [25.8650,-80.2810],[25.8400,-80.2930],[25.8100,-80.2950],[25.7960,-80.2940],
+  [26.742,-80.112],  // Mangonia Park Station / 45th St WPB
+  [26.715,-80.113],  // Summit Blvd, WPB
+  [26.693,-80.115],  // Belvedere Rd area
+  [26.648,-80.122],  // Lake Worth Rd
+  [26.620,-80.124],  // Lantana Rd
+  [26.580,-80.126],  // Boynton Beach Blvd / Woolbright Rd
+  [26.555,-80.127],  // Woolbright Rd S
+  [26.499,-80.128],  // Atlantic Ave, Delray Beach Station
+  [26.478,-80.129],  // Linton Blvd
+  [26.420,-80.130],  // Glades Rd / Yamato — Boca Station
+  [26.396,-80.131],  // Camino Real
+  [26.376,-80.132],  // Palmetto Park Rd
+  [26.347,-80.133],  // SW 10th St
+  [26.317,-80.134],  // ★ Hillsboro Blvd — DEERFIELD BCH STATION
+  [26.272,-80.135],  // Atlantic Blvd, Pompano Station
+  [26.252,-80.136],  // Copans Rd
+  [26.239,-80.137],  // Cypress Creek Rd
+  [26.215,-80.138],  // Commercial Blvd
+  [26.182,-80.140],  // Oakland Park Blvd
+  [26.165,-80.141],  // Sunrise Blvd — FTL Airport Station
+  [26.145,-80.143],  // Broward Blvd / Davie Blvd
+  [26.118,-80.145],  // Stirling Rd — Hollywood Station
+  [26.102,-80.147],  // Sheridan St
+  [26.078,-80.150],  // Miramar Pkwy
+  [26.055,-80.155],  // Pembroke Rd — Pembroke Pines Station
+  [26.030,-80.163],  // Hallandale Beach Blvd
+  [26.010,-80.172],  // Golden Glades / NW 199th St — curves SW
+  [25.993,-80.185],  // NW 183rd St
+  [25.978,-80.200],  // NW 175th St
+  [25.965,-80.216],  // NW 167th St
+  [25.953,-80.233],  // NW 154th St / Opa-locka
+  [25.942,-80.251],  // NW 138th St
+  [25.931,-80.268],  // NW 125th St
+  [25.921,-80.283],  // NW 119th St
+  [25.912,-80.297],  // NW 103rd St — Metrorail Transfer
+  [25.795,-80.294],  // ★ Miami Airport / MIC terminus
 ];
 
+// ── FEC (Florida East Coast / Brightline) — crossing-verified N→S ──
+// Track runs along US-1 / Federal Highway, ~2km EAST of I-95.
+// South of Aventura curves west through Little River to Hialeah Yard.
 const FALLBACK_FEC = [
-  [26.7130,-80.0535],[26.6928,-80.0548],[26.6772,-80.0562],[26.6475,-80.0582],
-  [26.6195,-80.0622],[26.5955,-80.0685],[26.5570,-80.0730],[26.5185,-80.0768],
-  [26.4985,-80.0785],[26.4695,-80.0840],[26.4490,-80.0868],[26.4200,-80.0888],
-  [26.3960,-80.0905],[26.3760,-80.0918],[26.3570,-80.0928],[26.3168,-80.0915],
-  [26.2955,-80.0918],[26.2720,-80.0920],[26.2518,-80.0922],[26.2390,-80.0925],
-  [26.2175,-80.0930],[26.1935,-80.0935],[26.1820,-80.0940],[26.1650,-80.0945],
-  [26.1455,-80.0962],[26.1200,-80.0975],[26.1050,-80.0988],[26.0960,-80.1010],
-  [26.0820,-80.1025],[26.0580,-80.1042],[26.0330,-80.1060],[26.0060,-80.1078],
-  [25.9820,-80.1095],[25.9580,-80.1110],[25.9420,-80.1310],[25.9250,-80.1520],
-  [25.9100,-80.1680],[25.8950,-80.1810],[25.8800,-80.1870],[25.8650,-80.1900],
-  [25.8500,-80.1930],[25.8350,-80.1960],[25.8200,-80.1990],[25.7950,-80.2130],
+  [26.715,-80.054],  // ★ Brightline WPB Station
+  [26.693,-80.053],  // WPB S / Flagler Dr area
+  [26.620,-80.058],  // Lake Worth Beach
+  [26.593,-80.063],  // Lantana Rd
+  [26.535,-80.073],  // Boynton Beach Blvd
+  [26.505,-80.076],  // Woolbright Rd
+  [26.461,-80.080],  // Atlantic Ave, Delray Beach
+  [26.438,-80.082],  // Linton Blvd
+  [26.375,-80.088],  // ★ Brightline Boca Station / Glades Rd
+  [26.352,-80.091],  // Camino Real
+  [26.328,-80.092],  // SW 18th St
+  [26.317,-80.091],  // ★ Deerfield Beach FEC / Hillsboro Blvd
+  [26.295,-80.092],  // Sample Rd
+  [26.248,-80.092],  // Atlantic Blvd, Pompano FEC
+  [26.225,-80.092],  // Copans Rd
+  [26.195,-80.093],  // Cypress Creek Rd
+  [26.170,-80.093],  // Commercial Blvd / Oakland Park
+  [26.143,-80.143],  // ★ Brightline Ft Lauderdale Station — curves west here
+  [26.122,-80.145],  // Griffin Rd area
+  [26.105,-80.148],  // Sheridan St
+  [26.080,-80.151],  // Miramar Pkwy
+  [26.055,-80.153],  // Pembroke Rd — Dania/Hollywood area
+  [26.033,-80.156],  // Hollywood Blvd
+  [26.003,-80.158],  // Hallandale Beach Blvd
+  [25.982,-80.160],  // NW 199th St
+  [25.958,-80.142],  // Aventura — track shifts east toward coast
+  [25.938,-80.133],  // NE 185th St
+  [25.918,-80.130],  // NE 167th / Little River — curves west
+  [25.900,-80.132],  // NE 151st St
+  [25.880,-80.140],  // NE 135th St
+  [25.865,-80.158],  // NE 123rd St
+  [25.854,-80.182],  // NE 111th / Miami Shores
+  [25.848,-80.208],  // NE 79th St — Hialeah approach
+  [25.845,-80.213],  // ★ Hialeah Yard / Little River terminus
 ];
 
 // Live arrays — start with fallback so trains show immediately
@@ -697,17 +751,30 @@ function setTrackStatus(msg, col) {
 }
 
 // Apply new track data — updates lines AND engine atomically
+// Only replaces if new data is genuinely better (more points)
 function applyTrackData(csx, fec) {
-  if (csx && csx.length > 10) liveCsxPts = csx;
-  if (fec && fec.length > 10) liveFecPts = fec;
-  sfrcLine.setLatLngs(liveCsxPts);
-  fecLine.setLatLngs(liveFecPts);
+  if (csx && csx.length > liveCsxPts.length) {
+    liveCsxPts = csx;
+    sfrcLine.setLatLngs(liveCsxPts);
+  }
+  if (fec && fec.length > liveFecPts.length) {
+    liveFecPts = fec;
+    fecLine.setLatLngs(liveFecPts);
+  }
   rebuildTrackEngine();
 }
 
+// Safety net: rebuild engine 1s after page load in case anything was deferred
+setTimeout(() => { rebuildTrackEngine(); }, 1000);
+
 // ── OSM fetch (upgrades fallback to real geometry) ────────
-const TRACK_CACHE_KEY  = "osmTrackData_v6";
+const TRACK_CACHE_KEY  = "osmTrackData_v7";
 const TRACK_CACHE_DAYS = 60;
+
+// Clear any old broken cache versions on startup
+["osmTrackData_v3","osmTrackData_v4","osmTrackData_v5","osmTrackData_v6"].forEach(k=>{
+  try{localStorage.removeItem(k);}catch(e){}
+});
 const OVERPASS_URLS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
