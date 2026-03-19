@@ -444,7 +444,6 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-window.onload = function() {
 
 // ══════════════════════════════════════════════════════════
 // GEOGRAPHY
@@ -917,6 +916,28 @@ function speedToFracPerMin(track, mph) {
   return mph / (totalMiles * 60);
 }
 
+// Snap a raw GPS coordinate to the nearest point on a track line
+// Returns [lat, lng] or null if track not loaded
+function snapToTrack(lat, lng, trackKey) {
+  const pts = trackKey === "fec" ? liveFecPts : liveCsxPts;
+  if (!pts || pts.length < 2) return null;
+  let bestDist = Infinity, bestLat = lat, bestLng = lng;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [lat1, lng1] = pts[i];
+    const [lat2, lng2] = pts[i+1];
+    // Project point onto segment
+    const dx = lat2-lat1, dy = lng2-lng1;
+    const lenSq = dx*dx + dy*dy;
+    let t = lenSq > 0 ? ((lat-lat1)*dx + (lng-lng1)*dy) / lenSq : 0;
+    t = Math.max(0, Math.min(1, t));
+    const pLat = lat1 + t*dx, pLng = lng1 + t*dy;
+    const dist = Math.hypot(lat-pLat, lng-pLng);
+    if (dist < bestDist) { bestDist = dist; bestLat = pLat; bestLng = pLng; }
+  }
+  // Only snap if within ~1 mile (0.015°) — otherwise use raw GPS
+  return bestDist < 0.015 ? [bestLat, bestLng] : null;
+}
+
 // Return {lat,lng} for a scheduled train at simMins
 function schedPos(t, sM) {
   const track    = t.track === "fec" ? fecTrack : csxTrack;
@@ -1203,7 +1224,7 @@ out body;`;
       <div style="font-size:8px;letter-spacing:1px;color:#f5a623;margin-bottom:3px">⚠️ RAILWAY CROSSING</div>
       <b style="color:#fff;font-size:12px">${roadName || "Unnamed crossing"}</b><br>
       <span style="color:#aaa;font-size:9px">${safety}</span>
-      ${supervision?`<br><span style="color:#6a8090;font-size:9px">Supervision: ${supervision}</span>`:""}
+      ${supervision?"<br><span style=\"color:#6a8090;font-size:9px\">Supervision: "+supervision+"</span>":""}
       <br><span style="color:#3a5060;font-size:8px">📍 ${node.lat.toFixed(5)}, ${node.lon.toFixed(5)}</span>`;
 
     L.marker([node.lat, node.lon], {icon: crossingIcon, zIndexOffset: 100})
@@ -1321,7 +1342,7 @@ function updateHistUI() {
         <div class="hist-name">${e.train}</div>
         <div style="font-size:8px;color:#3a5060">${e.cat} · ${e.dir==="SB"?"↓":"↑"}
           ${e.auto?"· 📍 auto":"· 👆 manual"}</div>
-        ${e.cargo?`<div style="font-size:8px;color:#ffb347;margin-top:1px">${e.cargo}</div>`:""}
+        ${e.cargo?"<div style=\"font-size:8px;color:#ffb347;margin-top:1px\">"+e.cargo+"</div>":""}
       </div>
     </div>`;
   }).join("");
@@ -1500,22 +1521,31 @@ function render() {
     const age   = (Date.now()-lt.updated)/1000;
     const ageStr= age>120 ? `<br><span style="color:#888;font-size:9px">${Math.round(age/60)}m ago</span>` : "";
     const cargo = getCargo(lt.name) || getCargo(lt.num) || "";
+    // Snap live GPS position to nearest point on the correct track line
+    const snapped = snapToTrack(lt.lat, lt.lng, lt.type==="brightline"?"fec":"csx");
+    const lat = snapped ? snapped[0] : lt.lat;
+    const lng = snapped ? snapped[1] : lt.lng;
     const pop = `
       <span style="color:${col};font-size:8px;letter-spacing:1px">${lt.type.toUpperCase()} · ${lt.dir==="SB"?"↓ SOUTH":"↑ NORTH"}</span><br>
       <b style="color:#fff;font-size:14px">${emoji} ${lt.name}</b><br>
       <span style="color:#6a8090;font-size:9px">Train #${lt.num}${ageStr}</span><br>
-      ${lt.speed?`<span style="color:#00ee77;font-size:11px;font-weight:bold">⚡ ${Math.round(lt.speed)} mph</span> · `:""}
+      ${lt.speed?"<span style=\"color:#00ee77;font-size:11px;font-weight:bold\">⚡ "+Math.round(lt.speed)+" mph</span> · ":""}
       <span style="color:#6a8090;font-size:9px">heading ${lt.heading}</span><br>
-      ${cargo?`<span style="color:#ffb347;font-size:9px">${cargo}</span><br>`:""}
-      <span style="color:#00ee77;font-size:9px">📡 LIVE GPS POSITION</span>`;
-    putMarker(id, lt.lat, lt.lng, lt.type, emoji, col, lt.dir, true, pop, lt.speed);
+      ${cargo?"<span style=\"color:#ffb347;font-size:9px\">"+cargo+"</span><br>":""}
+      <span style="color:#00ee77;font-size:9px">📡 LIVE GPS</span>`;
+    putMarker(id, lat, lng, lt.type, emoji, col, lt.dir, true, pop, lt.speed);
     keepIds.add(id);
   }
 
-  // 2. Schedule-interpolated
+  // 2. Schedule-interpolated — shown for ALL train types
+  // Live GPS trains are already shown above; skip only if there's a live GPS
+  // train for that SPECIFIC train number (not the whole type)
+  const liveTrainNums = new Set(Object.values(liveData).map(l => l.num));
   for (const t of ALL) {
     if (!onTrack(t, sM)) continue;
-    if (freshLive && (t.type==="amtrak"||t.type==="brightline") && liveTypes.has(t.type)) continue;
+    // Only skip if this exact train has live GPS data
+    const trainNum = t.train.match(/\d+/)?.[0];
+    if (freshLive && trainNum && liveTrainNums.has(trainNum)) continue;
     const pos   = schedPos(t, sM);
     const col   = tCol(t);
     const emoji = tEmoji(t);
@@ -1527,7 +1557,7 @@ function render() {
       <b style="color:#fff;font-size:14px">${emoji} ${t.train}</b><br>
       <span style="color:#6a8090;font-size:9px">Deerfield Beach: ${t.time}</span><br>
       <span style="color:#a78bfa;font-size:11px;font-weight:bold">~ ${spd} mph</span><br>
-      ${cargo?`<span style="color:#ffb347;font-size:9px">${cargo}</span><br>`:""}
+      ${cargo?"<span style=\"color:#ffb347;font-size:9px\">"+cargo+"</span><br>":""}
       <span style="color:#f5a623;font-size:9px">📅 SCHEDULE-BASED</span>`;
     putMarker(id, pos.lat, pos.lng, t.type, emoji, col, t.dir, false, pop, spd);
     keepIds.add(id);
@@ -1590,16 +1620,16 @@ function render() {
       const spd    = Math.round(SPEED_MPH[t.type] || 50);
       const logoHtml = `<img class="op-logo" src="${logoUrl}" alt="${t.cat}"/>`;
       html += `<div class="trow" id="row-${schId}" data-trainid="${schId}"
-          style="${ot?`background:${col}0d;border-color:${col}44`:""}">
+          style="${ot?'background:'+col+'0d;border-color:'+col+'44':''}">
         ${logoHtml}
         <div class="ttime">${t.time}</div>
         <div class="tinfo">
           <div class="tname" style="color:${col}">${tEmoji(t)} ${t.train}</div>
           <div class="tmeta">${t.dir==="SB"?"↓":"↑"} ${t.cat} · ${t.track==="fec"?"FEC":"CSX"} · <span style="color:#a78bfa">~${spd}mph</span></div>
-          ${cargo?`<div class="cargo-tag">${cargo}</div>`:""}
+          ${cargo?"<div class=\"cargo-tag\">"+cargo+"</div>":""}
         </div>
-        ${ot?`<div class="tbadge" style="color:${col};background:${col}20;border:1px solid ${col}55">
-          ${hasLive?"📡 LIVE":"📅 TRACK"}</div>`:""}
+        ${ot?"<div class=\"tbadge\" style=\"color:"+col+";background:"+col+"20;border:1px solid "+col+"55\">"+
+          (hasLive?"📡 LIVE":"📅 TRACK")+"</div>":""}
       </div>`;
     });
   }
@@ -1678,7 +1708,6 @@ setTimeout(autoDetectAndFix, 300);
 setTimeout(autoDetectAndFix, 600);
 window.addEventListener("resize", fixMapSize);
 
-}; // end window.onload
 
 // Register Service Worker only when hosted on real domain (not Claude preview)
 if ("serviceWorker" in navigator && 
