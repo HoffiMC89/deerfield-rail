@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Deerfield Rail Tracker</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b1020">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rail Tracker">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:'Courier New',monospace;background:#060a14;color:#c8d6e5;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:720px;margin:0 auto}
+
+/* ── HEADER — compact single row ── */
+#hdr{background:#0b1020;border-bottom:1px solid #18243a;padding:5px 10px;
+  flex-shrink:0;display:flex;align-items:center;gap:8px;min-height:44px}
+.hlogo{display:flex;flex-direction:column;flex-shrink:0}
+.htitle{font-size:12px;font-weight:bold;color:#fff;letter-spacing:2px;white-space:nowrap}
+.hsub{font-size:6px;color:#2a3a50;letter-spacing:1px;white-space:nowrap}
+#clock{font-size:18px;color:#f5a623;letter-spacing:2px;white-space:nowrap;
+  text-shadow:0 0 10px rgba(245,166,35,.5);flex:1;text-align:center}
+.hbtns{display:flex;align-items:center;gap:4px;flex-shrink:0}
+button{border:1px solid #2a3a50;background:#182030;color:#c8d6e5;padding:5px 9px;
+  border-radius:5px;cursor:pointer;font-size:10px;font-family:monospace;letter-spacing:1px;
+  touch-action:manipulation;user-select:none;min-height:32px;min-width:32px}
+button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
+#liveBtn{border-color:#00ee77;color:#00ee77;font-size:11px}
+#liveBtn.on{background:#00ee77;color:#000;border-color:#00ee77}
+#s60,#s300{font-size:10px}
+#modeBtn{border-color:#a78bfa;color:#a78bfa;font-size:10px;display:none}
+#modeBtn.on{background:#a78bfa;color:#000}
+/* show desktop toggle only on wider screens */
+@media(min-width:520px){#modeBtn{display:block}}
+
+/* ── BODY ── */
+#body{display:flex;flex:1;overflow:hidden;flex-direction:column;min-height:0}
+#body.desktop{flex-direction:row}
+
+/* ── MAP ── */
+#mapwrap{position:relative;flex-shrink:0}
+/* MOBILE: use fixed pixel height so it doesn't depend on viewport tricks */
+#body:not(.desktop) #mapwrap{width:100%}
+#body:not(.desktop) #map{height:240px}
+/* DESKTOP: map fills left column */
+#body.desktop #mapwrap{width:55%;height:100%;flex-shrink:0}
+#body.desktop #map{height:100%}
+#map{width:100%}
+
+/* map overlays */
+#mapcorner{position:absolute;top:5px;left:5px;z-index:1000;background:rgba(5,8,18,.9);
+  border:1px solid #18243a;border-radius:5px;padding:3px 7px;font-size:6.5px;
+  letter-spacing:1px;color:#3a5060;pointer-events:none;line-height:1.6}
+#mapcorner b{color:#f5a623}
+#apistatus{position:absolute;top:5px;right:5px;z-index:1000;background:rgba(5,8,18,.9);
+  border:1px solid #18243a;border-radius:5px;padding:3px 7px;font-size:6.5px;
+  letter-spacing:1px;pointer-events:none;color:#f5a623}
+#layertoggle{position:absolute;bottom:20px;right:5px;z-index:1000;display:flex;flex-direction:column;gap:3px}
+#layertoggle button{background:rgba(5,8,18,.92);border:1px solid #334;color:#aaa;
+  padding:3px 7px;font-size:8px;border-radius:4px;min-height:26px}
+#layertoggle button.on{border-color:#f5a623;color:#f5a623;background:#182030}
+
+/* YOU marker */
+.you-ring{width:18px;height:18px;border-radius:50%;background:rgba(0,238,119,.2);
+  display:flex;align-items:center;justify-content:center;animation:youPulse 2s infinite}
+.you-dot{width:11px;height:11px;border-radius:50%;background:#00ee77;border:2px solid #fff;
+  box-shadow:0 0 10px #00ee7788}
+@keyframes youPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,238,119,.4)}50%{box-shadow:0 0 0 6px rgba(0,238,119,0)}}
+
+/* ── PANEL ── */
+#panel{display:flex;flex-direction:column;flex:1;overflow:hidden;
+  border-top:1px solid #18243a;min-height:0}
+#body.desktop #panel{border-top:none;border-left:1px solid #18243a;
+  width:45%;flex-shrink:0}
+
+/* NEXT banner — compact on mobile */
+#nextbanner{margin:4px 8px 2px;padding:6px 10px;
+  background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.13);
+  border-radius:7px;flex-shrink:0}
+.nlabel{font-size:7px;letter-spacing:2px;color:#00d4ff;margin-bottom:1px}
+.nrow{display:flex;align-items:center;gap:8px}
+#ntime{font-size:20px;color:#fff;font-weight:bold;line-height:1;flex-shrink:0}
+.ninfo{flex:1;min-width:0}
+#ntrain{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nmeta{font-size:8px;color:#2a3a50}
+#ncd{font-size:13px;color:#f5a623;font-weight:bold;flex-shrink:0}
+
+/* ON TRACK bar */
+#otbar{margin:0 8px 2px;padding:3px 10px;background:rgba(255,140,0,.05);
+  border:1px solid rgba(255,140,0,.17);border-radius:5px;flex-shrink:0;display:none}
+.otlabel{font-size:7px;color:#ff8c00;letter-spacing:1px}
+#otchips{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px}
+.chip{font-size:7px;padding:1px 4px;border-radius:3px;border:1px solid;white-space:nowrap}
+
+/* FILTER tabs */
+#filters{display:flex;gap:3px;padding:2px 8px;flex-shrink:0;overflow-x:auto;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none}
+#filters::-webkit-scrollbar{display:none}
+#filters button{border:1px solid #18243a;background:transparent;color:#3a5060;
+  padding:3px 10px;border-radius:20px;font-size:9px;letter-spacing:1px;
+  white-space:nowrap;flex-shrink:0;min-height:26px}
+#filters button.on{background:#182a40;border-color:#00d4ff;color:#00d4ff}
+
+/* LIST */
+#listscroll{flex:1;overflow-y:auto;padding:2px 8px 8px;-webkit-overflow-scrolling:touch;min-height:0}
+#listscroll::-webkit-scrollbar{width:3px}
+#listscroll::-webkit-scrollbar-thumb{background:#18243a;border-radius:2px}
+.sec{font-size:7px;letter-spacing:2px;color:#2a3a50;padding:4px 2px 2px}
+
+/* Train row */
+.trow{display:flex;align-items:center;gap:8px;padding:7px 8px;margin-bottom:3px;
+  border-radius:8px;border:1px solid transparent;cursor:pointer;transition:background .15s}
+.trow:active{background:rgba(255,255,255,.05)!important}
+.trow.selected{outline:2px solid #f5a623;background:rgba(245,166,35,.07)!important}
+/* Operator logo */
+.op-logo{width:64px;height:32px;object-fit:contain;border-radius:5px;
+  background:rgba(255,255,255,.08);flex-shrink:0;padding:3px 4px;
+  border:1px solid rgba(255,255,255,.1)}
+.op-logo-err{width:64px;height:32px;display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0}
+.ttime{font-size:14px;color:#fff;min-width:44px;flex-shrink:0;font-weight:bold}
+.tinfo{flex:1;min-width:0}
+.tname{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tmeta{font-size:8px;color:#2a3a50;margin-top:1px}
+.tbadge{font-size:7px;padding:2px 5px;border-radius:3px;flex-shrink:0;letter-spacing:1px;white-space:nowrap}
+
+/* Passed rows */
+.prow{display:flex;align-items:center;gap:8px;padding:4px 10px;opacity:.3;margin-bottom:1px}
+.pdot{width:5px;height:5px;border-radius:50%;background:#2a3a50;flex-shrink:0}
+.ptime{font-size:11px;color:#6a8090;min-width:44px}
+.pname{font-size:9px;color:#3a5060;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pdir{font-size:9px;color:#2a3a50}
+
+#footer{display:none}/* hidden on mobile to save space */
+#body.desktop~* #footer,
+#body.desktop #panel #footer{display:block;padding:4px 10px;border-top:1px solid #18243a;
+  font-size:6px;color:#1a2a38;letter-spacing:1px;flex-shrink:0;line-height:1.5}
+
+/* LIVE indicator dot */
+#liveindicator{font-size:7px;letter-spacing:1px;white-space:nowrap}
+.isLive{color:#00ee77}.isSim{color:#f5a623}
+
+/* ── FEATURE 8: Speed badge on map markers ── */
+.spd-badge{font-size:7px;font-weight:bold;background:rgba(0,0,0,.7);
+  color:#fff;padding:1px 3px;border-radius:2px;white-space:nowrap}
+
+/* ── FEATURE 9: Cargo tag in list row ── */
+.cargo-tag{font-size:7px;color:#ffb347;margin-top:1px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;opacity:.85}
+
+/* ── FEATURE 15: Trip history panel ── */
+#historyPanel{display:none;position:absolute;inset:0;background:#060a14;
+  z-index:2000;flex-direction:column;overflow:hidden}
+#historyPanel.open{display:flex}
+#histPanelHdr{background:#0b1020;border-bottom:1px solid #18243a;padding:8px 12px;
+  display:flex;align-items:center;gap:8px;flex-shrink:0}
+#histPanelHdr h2{flex:1;font-size:13px;color:#fff;letter-spacing:2px}
+#histClose{background:transparent;border:1px solid #334;color:#aaa;
+  padding:4px 10px;border-radius:4px;font-size:11px}
+#histList{flex:1;overflow-y:auto;padding:8px 12px}
+#histList::-webkit-scrollbar{width:3px}
+#histList::-webkit-scrollbar-thumb{background:#18243a}
+.hist-empty{color:#2a3a50;font-size:11px;text-align:center;margin-top:40px;line-height:2}
+.hist-row{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:3px;
+  border-radius:6px;background:#0b1020;border:1px solid #18243a}
+.hist-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.hist-time{font-size:11px;color:#f5a623;min-width:50px;flex-shrink:0}
+.hist-name{font-size:11px;color:#fff;flex:1}
+.hist-meta{font-size:9px;color:#3a5060;flex-shrink:0}
+#histFooter{padding:8px 12px;border-top:1px solid #18243a;display:flex;gap:8px;flex-shrink:0}
+#histClear{background:#1a0808;border:1px solid #e63946;color:#e63946;
+  padding:5px 12px;border-radius:4px;font-size:10px;flex:1}
+#histExport{background:#0a1a0a;border:1px solid #00ee77;color:#00ee77;
+  padding:5px 12px;border-radius:4px;font-size:10px;flex:1}
+
+/* ── FEATURE 7: Quiet zone strip styles ── */
+.quiet-zone-label{font-size:7px;color:#a0c4ff}
+
+/* weather toggle btn */
+#btnWeather{background:rgba(5,8,18,.9);border:1px solid #334;color:#aaa;
+  padding:3px 7px;font-size:8px;border-radius:4px;min-height:26px}
+#btnWeather.on{border-color:#60a5fa;color:#60a5fa;background:#0d1a2e}
+
+.leaflet-popup-content-wrapper{background:#0a0e1a!important;border:1px solid #1e2d4a!important;
+  border-radius:8px!important;box-shadow:0 4px 20px rgba(0,0,0,.8)!important;color:#c8d6e5!important}
+.leaflet-popup-content{margin:10px 13px!important;font-family:'Courier New',monospace!important}
+.leaflet-popup-tip{background:#0a0e1a!important}
+.leaflet-popup-close-button{color:#556!important;top:6px!important;right:8px!important;font-size:18px!important}
+.leaflet-bar a{background:#0b1020!important;color:#c8d6e5!important;border-color:#1e2d4a!important}
+.leaflet-bar a:hover{background:#182030!important}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER — compact single row -->
+  <div id="hdr">
+    <div class="hlogo">
+      <div class="htitle">🚂 DEERFIELD RAIL</div>
+      <div class="hsub">TRI-RAIL · AMTRAK · BRIGHTLINE · FEC · CSX</div>
+    </div>
+    <div id="clock">--:--:--</div>
+    <div class="hbtns">
+      <div id="liveindicator" class="isLive">●</div>
+      <button id="liveBtn" class="on">📡</button>
+      <button id="s60">60×</button>
+      <button id="s300">5m/s</button>
+      <button id="modeBtn">🖥</button>
+    </div>
+  </div>
+
+  <!-- BODY (map + panel) -->
+  <div id="body">
+
+    <!-- MAP -->
+    <div id="mapwrap">
+      <div id="map"></div>
+      <div id="mapcorner">
+        <b id="otcount">0</b> TRAINS IN 50MI CORRIDOR<br>
+        🟡 CSX/TRI-RAIL &nbsp;🟠 FEC/BRIGHTLINE
+      </div>
+      <div id="apistatus">⏳ LOADING…</div>
+      <!-- locate button — bottom left -->
+      <button id="locateBtn" style="position:absolute;bottom:52px;left:6px;z-index:1000;
+        background:rgba(5,8,18,.92);border:1px solid #00ee77;color:#00ee77;
+        padding:5px 9px;border-radius:5px;font-size:14px;min-height:32px;
+        box-shadow:0 2px 8px rgba(0,0,0,.5)" title="Center on my location">📍</button>
+      <div id="layertoggle">
+        <button id="btnSat" class="on">🛰 SAT</button>
+        <button id="btnOsm">🗺 OSM</button>
+        <button id="btnDark">🌑 DARK</button>
+        <button id="btnWeather">🌧 RAIN</button>
+      </div>
+    </div>
+
+  <!-- HISTORY PANEL (full-screen overlay) -->
+  <div id="historyPanel">
+    <div id="histPanelHdr">
+      <h2>🕐 TRAIN LOG</h2>
+      <span id="histCount" style="font-size:10px;color:#3a5060"></span>
+      <button id="histClose">✕ CLOSE</button>
+    </div>
+    <div id="histList"><div class="hist-empty">No trains logged yet.<br>Trains are automatically logged<br>when they pass your position.</div></div>
+    <div id="histFooter">
+      <button id="histClear">🗑 CLEAR ALL</button>
+      <button id="histExport">📋 COPY CSV</button>
+    </div>
+  </div>
+
+    <!-- PANEL -->
+    <div id="panel">
+      <div id="nextbanner">
+        <div class="nlabel">⚡ NEXT AT DEERFIELD BCH</div>
+        <div class="nrow">
+          <div id="ntime">--:--</div>
+          <div style="min-width:0">
+            <div id="ntrain" style="color:#888">---</div>
+            <div id="nmeta">---</div>
+          </div>
+          <div id="ncd">--</div>
+        </div>
+      </div>
+      <div id="otbar">
+        <div class="otlabel">● ON TRACK NOW</div>
+        <div id="otchips"></div>
+      </div>
+      <div id="filters">
+        <button id="fAll"  class="on">All</button>
+        <button id="fTri">Tri-Rail</button>
+        <button id="fAmtrak">Amtrak</button>
+        <button id="fBL">Brightline</button>
+        <button id="fFec">FEC</button>
+        <button id="fCsx">CSX</button>
+      </div>
+      <div id="listscroll"></div>
+      <div id="panelFooter" style="padding:4px 8px;border-top:1px solid #18243a;flex-shrink:0;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:6px;color:#1a2a38;letter-spacing:1px">SAT:ESRI · LIVE:AMTRAKER · SCHED:TRI-RAIL.COM</span>
+        <button id="histBtn" style="background:#0b1020;border:1px solid #3a5060;color:#a0c4ff;
+          padding:3px 8px;border-radius:4px;font-size:9px;min-height:24px">🕐 LOG</button>
+      </div>
+    </div>
+
+  </div><!-- end #body -->
+</div><!-- end #app -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+window.onload = function() {
+
+// ══════════════════════════════════════════════════════════
+// GEOGRAPHY  (updated to exact GPS from user)
+// ══════════════════════════════════════════════════════════
+const YOU_LAT = 26.310540, YOU_LNG = -80.128932;
+const STAT_LAT= 26.3168,   STAT_LNG= -80.1222;
+const CSX_LNG = -80.1222,  FEC_LNG = -80.0995;
+const MAP_N   = 26.95,    MAP_S   = 25.78;  // real track termini
+
+// ══════════════════════════════════════════════════════════
+// SCHEDULES
+// ══════════════════════════════════════════════════════════
+const toMins = t => { const [h,m]=t.split(":").map(Number); return h*60+m; };
+const mk = (x,l) => l.map(t=>({...x,...t,mins:toMins(t.time)}));
+
+const ALL = [
+  ...mk({type:"tri",cat:"Tri-Rail",dir:"SB",track:"csx"},[
+    {time:"04:42",train:"P601"},{time:"05:24",train:"P603"},{time:"06:04",train:"P605"},
+    {time:"06:44",train:"P607"},{time:"07:24",train:"P611"},{time:"07:44",train:"P613"},
+    {time:"08:14",train:"P615"},{time:"08:44",train:"P617"},{time:"09:44",train:"P619"},
+    {time:"10:44",train:"P621"},{time:"11:44",train:"P623"},{time:"12:44",train:"P625"},
+    {time:"13:44",train:"P627"},{time:"15:44",train:"P631"},{time:"16:14",train:"P633"},
+    {time:"16:44",train:"P635"},{time:"17:14",train:"P637"},{time:"17:44",train:"P639"},
+    {time:"18:14",train:"P641"},{time:"18:59",train:"P643"},{time:"19:29",train:"P645"},
+    {time:"20:24",train:"P647"},{time:"21:24",train:"P649"},
+  ]),
+  ...mk({type:"tri",cat:"Tri-Rail",dir:"NB",track:"csx"},[
+    {time:"05:00",train:"P602"},{time:"05:42",train:"P604"},{time:"06:22",train:"P606"},
+    {time:"07:02",train:"P608"},{time:"07:42",train:"P612"},{time:"08:02",train:"P614"},
+    {time:"08:32",train:"P616"},{time:"09:02",train:"P618"},{time:"10:02",train:"P620"},
+    {time:"11:02",train:"P622"},{time:"12:02",train:"P624"},{time:"13:02",train:"P626"},
+    {time:"14:02",train:"P628"},{time:"16:02",train:"P632"},{time:"16:32",train:"P634"},
+    {time:"17:02",train:"P636"},{time:"17:32",train:"P638"},{time:"18:02",train:"P640"},
+    {time:"18:32",train:"P642"},{time:"19:17",train:"P644"},{time:"19:47",train:"P646"},
+    {time:"20:42",train:"P648"},{time:"21:42",train:"P650"},
+  ]),
+  ...mk({type:"amtrak",cat:"Amtrak",track:"csx"},[
+    {time:"07:58",train:"#97 Silver Meteor",dir:"SB"},
+    {time:"10:30",train:"#91 Silver Star",dir:"SB"},
+    {time:"16:45",train:"#92 Silver Star",dir:"NB"},
+    {time:"21:15",train:"#98 Silver Meteor",dir:"NB"},
+  ]),
+  ...mk({type:"brightline",cat:"Brightline",dir:"SB",track:"fec"},[
+    {time:"05:34",train:"BL↓ Miami"},{time:"06:32",train:"BL↓ Miami"},
+    {time:"07:42",train:"BL↓ Miami"},{time:"08:12",train:"BL↓ Miami"},
+    {time:"09:32",train:"BL↓ Miami"},{time:"11:32",train:"BL↓ Miami"},
+    {time:"13:32",train:"BL↓ Miami"},{time:"15:32",train:"BL↓ Miami"},
+    {time:"17:32",train:"BL↓ Miami"},{time:"19:32",train:"BL↓ Miami"},
+    {time:"21:32",train:"BL↓ Miami"},{time:"23:32",train:"BL↓ Miami"},
+  ]),
+  ...mk({type:"brightline",cat:"Brightline",dir:"NB",track:"fec"},[
+    {time:"07:35",train:"BL↑ WPB/ORL"},{time:"08:30",train:"BL↑ Orlando"},
+    {time:"09:35",train:"BL↑ WPB"},{time:"10:30",train:"BL↑ Orlando"},
+    {time:"11:35",train:"BL↑ WPB"},{time:"12:30",train:"BL↑ Orlando"},
+    {time:"13:35",train:"BL↑ WPB"},{time:"14:30",train:"BL↑ WPB"},
+    {time:"15:35",train:"BL↑ Orlando"},{time:"16:30",train:"BL↑ WPB"},
+    {time:"17:35",train:"BL↑ Orlando"},{time:"18:30",train:"BL↑ WPB"},
+    {time:"19:35",train:"BL↑ Orlando"},{time:"20:30",train:"BL↑ WPB"},
+    {time:"21:35",train:"BL↑ WPB"},{time:"22:30",train:"BL↑ WPB"},
+    {time:"23:35",train:"BL↑ WPB"},{time:"01:30",train:"BL↑ WPB"},
+  ]),
+  ...mk({type:"fec",cat:"FEC Freight",dir:"SB",track:"fec"},[
+    {time:"01:25",train:"FEC-107 Intermodal"},{time:"05:25",train:"FEC-101 Intermodal/Auto"},
+    {time:"06:55",train:"FEC-335 Rock Empties"},{time:"08:00",train:"FEC-193 Rock Turn"},
+    {time:"13:00",train:"FEC-109 Intermodal"},{time:"19:50",train:"FEC-191 Waste Mgmt"},
+    {time:"20:55",train:"FEC-105 UPS Hot"},{time:"23:00",train:"FEC-121 Tanks"},
+  ]),
+  ...mk({type:"fec",cat:"FEC Freight",dir:"NB",track:"fec"},[
+    {time:"00:55",train:"FEC-290 Waste Mgmt"},{time:"02:25",train:"FEC-202 Intermodal"},
+    {time:"03:05",train:"FEC-336 Rock Loads"},{time:"09:25",train:"FEC-960 Local"},
+    {time:"11:25",train:"FEC-945 Local"},{time:"13:25",train:"FEC-206 Mixed/Auto"},
+    {time:"19:25",train:"FEC-208 Cleanup"},{time:"21:25",train:"FEC-292 Rock Loads"},
+    {time:"22:55",train:"FEC-210 Crowley"},
+  ]),
+  ...mk({type:"csx",cat:"CSX Freight",track:"csx"},[
+    {time:"00:30",train:"CSX Q453",dir:"SB"},{time:"01:45",train:"CSX Mixed",dir:"SB"},
+    {time:"02:15",train:"CSX Rock Train",dir:"SB"},{time:"03:00",train:"CSX L459",dir:"SB"},
+    {time:"09:30",train:"CSX F05 Local",dir:"NB"},{time:"14:00",train:"CSX Local",dir:"SB"},
+    {time:"22:00",train:"CSX Q452",dir:"NB"},{time:"23:15",train:"CSX Rock Train",dir:"NB"},
+    {time:"00:45",train:"CSX F05 Return",dir:"NB"},{time:"04:30",train:"CSX Q452-2",dir:"NB"},
+  ]),
+].sort((a,b)=>a.mins-b.mins);
+
+// ══════════════════════════════════════════════════════════
+// COLORS & ICONS
+// ══════════════════════════════════════════════════════════
+const PAL = {
+  tri:        {SB:"#ff3d4d", NB:"#00d4ff"},
+  amtrak:     {SB:"#60a5fa", NB:"#60a5fa"},
+  brightline: {SB:"#ff44ff", NB:"#cc00dd"},
+  fec:        {SB:"#ff8c00", NB:"#ffb347"},
+  csx:        {SB:"#9b59f6", NB:"#b07aff"},
+};
+const tCol = t => (PAL[t.type]||{})[t.dir] || "#888";
+
+// Emoji icons per train type
+const EMOJI = {
+  tri:        "🚆",
+  amtrak:     "🚄",
+  brightline: "🚅",
+  fec:        "🚂",
+  csx:        "🚃",
+};
+const tEmoji = t => EMOJI[t.type] || "🚆";
+
+// ── placeholder removed – onTrack defined after track build ─
+
+// ══════════════════════════════════════════════════════════
+// MAP
+// ══════════════════════════════════════════════════════════
+// ── Operator logos — inline SVG data URIs (no external requests) ─────────────
+const LOGOS = {
+  tri: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">
+    <rect width="120" height="40" rx="5" fill="#c8102e"/>
+    <text x="60" y="16" font-family="Arial Black,sans-serif" font-size="11" font-weight="900" fill="white" text-anchor="middle">TRI-RAIL</text>
+    <text x="60" y="30" font-family="Arial,sans-serif" font-size="7" fill="#ffcccc" text-anchor="middle">SOUTH FLORIDA</text>
+  </svg>`)}`,
+
+  amtrak: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">
+    <rect width="120" height="40" rx="5" fill="#003580"/>
+    <polygon points="8,32 28,8 40,8 20,32" fill="#e31837"/>
+    <polygon points="22,32 42,8 54,8 34,32" fill="#e31837"/>
+    <text x="70" y="26" font-family="Arial Black,sans-serif" font-size="14" font-weight="900" fill="white" text-anchor="middle">Amtrak</text>
+  </svg>`)}`,
+
+  brightline: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">
+    <rect width="120" height="40" rx="5" fill="#1a1a1a"/>
+    <rect x="6" y="10" width="6" height="20" rx="1" fill="#ff0"/>
+    <rect x="15" y="10" width="6" height="20" rx="1" fill="#0f0"/>
+    <rect x="24" y="10" width="6" height="20" rx="1" fill="#0ff"/>
+    <rect x="33" y="10" width="6" height="20" rx="1" fill="#f0f"/>
+    <text x="75" y="26" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="white" text-anchor="middle">brightline</text>
+  </svg>`)}`,
+
+  fec: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">
+    <rect width="120" height="40" rx="5" fill="#1b3a6b"/>
+    <rect x="6" y="8" width="22" height="24" rx="2" fill="#f5a623"/>
+    <text x="17" y="24" font-family="Arial Black,sans-serif" font-size="10" font-weight="900" fill="#1b3a6b" text-anchor="middle">FEC</text>
+    <text x="75" y="18" font-family="Arial,sans-serif" font-size="7.5" fill="white" text-anchor="middle">FLORIDA EAST</text>
+    <text x="75" y="29" font-family="Arial,sans-serif" font-size="7.5" fill="white" text-anchor="middle">COAST RWY</text>
+  </svg>`)}`,
+
+  csx: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">
+    <rect width="120" height="40" rx="5" fill="#003087"/>
+    <text x="38" y="28" font-family="Arial Black,sans-serif" font-size="22" font-weight="900" fill="white" text-anchor="middle">CSX</text>
+    <text x="85" y="24" font-family="Arial,sans-serif" font-size="7" fill="#aac" text-anchor="middle">TRANSPORTATION</text>
+  </svg>`)}`,
+};
+
+const map = L.map("map", {
+  center: [26.27, -80.15],  // centered between the two corridors
+  zoom: 10,
+  zoomControl: true,
+  attributionControl: true,
+});
+
+const LAYERS = {
+  sat:  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          {attribution:"© Esri",maxZoom:19}),
+  osm:  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          {attribution:"© OpenStreetMap",maxZoom:19,subdomains:"abc"}),
+  dark: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+          {attribution:"© OSM © CARTO",maxZoom:19,subdomains:"abcd"}),
+};
+LAYERS.sat.addTo(map);
+// auto-fallback to OSM if satellite tiles error
+let satFallback=false;
+LAYERS.sat.on("tileerror",()=>{if(!satFallback){satFallback=true;setLayer("osm");}});
+
+function setLayer(name) {
+  Object.values(LAYERS).forEach(l=>{if(map.hasLayer(l))map.removeLayer(l);});
+  LAYERS[name].addTo(map);
+  document.getElementById("btnSat").className = name==="sat"?"on":"";
+  document.getElementById("btnOsm").className = name==="osm"?"on":"";
+  document.getElementById("btnDark").className = name==="dark"?"on":"";
+}
+// setLayer called via addEventListener above
+
+// Labels on top of satellite
+L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+  {attribution:"",maxZoom:19,opacity:0.85,pane:"shadowPane"}
+).addTo(map);
+
+// ── Track polylines — real-world GPS coordinates ─────────────────────────────
+//
+// CSX / South Florida Rail Corridor (Tri-Rail + Amtrak)
+// Runs INLAND, roughly parallel to I-95 but slightly west.
+// North terminus: Mangonia Park station (26.742°N) — then continues as CSX Auburndale Sub
+// South terminus: Miami Airport Station / Hialeah wye (25.795°N) — curves FAR WEST
+// Key characteristic: straight N-S through Broward, then sharp curve SW toward MIA
+//
+const csxPts = [
+  // ── North terminus: Mangonia Park (WPB suburbs) ──
+  [26.742,-80.1120],
+  // ── West Palm Beach area ──
+  [26.713,-80.1125],[26.695,-80.1127],[26.675,-80.1128],
+  // ── Lake Worth / Lantana ──
+  [26.648,-80.1205],[26.627,-80.1210],[26.608,-80.1213],
+  // ── Boynton Beach ──
+  [26.580,-80.1215],[26.558,-80.1218],
+  // ── Delray Beach ──
+  [26.499,-80.1220],[26.480,-80.1221],
+  // ── Boca Raton ──
+  [26.420,-80.1222],[26.400,-80.1222],[26.376,-80.1222],
+  // ── Deerfield Beach area ──
+  [26.340,-80.1222],[26.317,-80.1222],
+  // ── Pompano Beach ──
+  [26.272,-80.1222],[26.255,-80.1228],
+  // ── Cypress Creek / Oakland Park ──
+  [26.239,-80.1243],[26.218,-80.1255],
+  // ── Fort Lauderdale ──
+  [26.182,-80.1270],[26.170,-80.1278],
+  // ── Dania Beach / Hollywood ──
+  [26.145,-80.1285],[26.121,-80.1288],
+  // ── Hollywood station ──
+  [26.103,-80.1290],
+  // ── Opa-locka / Golden Glades area: track begins curving west ──
+  [26.079,-80.1300],[26.058,-80.1318],
+  // ── North Miami / Gratigny Pkwy: sharp curve west toward airport ──
+  [26.035,-80.1360],[26.020,-80.1430],
+  [26.006,-80.1530],[25.993,-80.1650],
+  [25.982,-80.1780],[25.972,-80.1920],
+  // ── Passing north of MIA, swinging southwest ──
+  [25.964,-80.2060],[25.957,-80.2200],
+  [25.950,-80.2360],[25.942,-80.2500],
+  // ── Miami Airport Station / Hialeah wye — south terminus ──
+  [25.795,-80.2940],
+];
+
+// FEC / Florida East Coast Railway (Brightline + freight)
+// Runs COASTAL, east of CSX, generally closer to the beach cities.
+// North terminus (in our 50mi window): Jupiter area (26.930°N, -80.087°W)
+// South terminus: Hialeah Yard, Miami (25.845°N, -80.213°W)
+// Key: more coastal, gentler curves, passes through downtown Fort Lauderdale area
+//
+const fecPts = [
+  // ── North (Jupiter / Tequesta area — FEC main line continues north to Jacksonville) ──
+  [26.930,-80.0870],
+  // ── Juno Beach / Palm Beach Gardens ──
+  [26.895,-80.0840],[26.867,-80.0825],
+  // ── West Palm Beach (Brightline station near downtown) ──
+  [26.713,-80.0535],[26.695,-80.0530],
+  // ── Lake Worth Beach ──
+  [26.617,-80.0580],[26.590,-80.0640],
+  // ── Boynton Beach / Lantana (coastal route) ──
+  [26.535,-80.0720],[26.508,-80.0762],
+  // ── Delray Beach ──
+  [26.462,-80.0795],[26.440,-80.0810],
+  // ── Boca Raton (Brightline station at Mizner Park area) ──
+  [26.356,-80.0925],[26.335,-80.0925],
+  // ── Deerfield Beach area (east of CSX) ──
+  [26.317,-80.0915],[26.295,-80.0916],
+  // ── Pompano Beach ──
+  [26.248,-80.0917],[26.228,-80.0918],
+  // ── Oakland Park / Fort Lauderdale north ──
+  [26.196,-80.0918],
+  // ── Fort Lauderdale (Brightline station, Andrews Ave) ──
+  [26.122,-80.1445],
+  // Wait — FEC actually runs through downtown FLL along Andrews Ave area
+  // then continues south toward Port Everglades spur, Dania, Hollywood
+  [26.100,-80.1460],[26.078,-80.1468],
+  // ── Dania Beach / Hollywood ──
+  [26.055,-80.1498],[26.033,-80.1540],
+  // ── Hallandale Beach ──
+  [26.004,-80.1560],[25.984,-80.1568],
+  // ── Aventura area ──
+  [25.958,-80.1400],
+  // ── North Miami Beach / Little River area: FEC turns west toward Hialeah ──
+  [25.934,-80.1350],[25.910,-80.1340],
+  [25.890,-80.1360],[25.871,-80.1420],
+  [25.860,-80.1550],[25.850,-80.1720],
+  // ── Hialeah Yard — south terminus ──
+  [25.845,-80.2130],
+];
+
+L.polyline(csxPts,{color:"#000",weight:6,opacity:.45}).addTo(map);
+L.polyline(csxPts,{color:"#ffe066",weight:2.5,opacity:.9}).addTo(map);
+L.polyline(fecPts,{color:"#000",weight:6,opacity:.45}).addTo(map);
+L.polyline(fecPts,{color:"#ff8c00",weight:2.5,opacity:.9}).addTo(map);
+
+// ── Polyline interpolation engine ──────────────────────────
+// Precompute cumulative distances along each track (in degrees, good enough for ~20 miles)
+function buildTrack(pts) {
+  const segs = []; // {p1, p2, segLen, cumLen}
+  let total = 0;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [lat1,lng1] = pts[i], [lat2,lng2] = pts[i+1];
+    const dlat = lat2-lat1, dlng = (lng2-lng1)*Math.cos(lat1*Math.PI/180);
+    const d = Math.sqrt(dlat*dlat + dlng*dlng);
+    segs.push({lat1,lng1,lat2,lng2,segLen:d,cumStart:total});
+    total += d;
+  }
+  return {segs, total};
+}
+
+// Given a fraction 0–1 along the track, return {lat,lng}
+function posOnTrack(track, fraction) {
+  const target = Math.max(0, Math.min(1, fraction)) * track.total;
+  for (let i = 0; i < track.segs.length; i++) {
+    const s = track.segs[i];
+    const cumEnd = s.cumStart + s.segLen;
+    if (target <= cumEnd || i === track.segs.length - 1) {
+      const t = s.segLen > 0 ? (target - s.cumStart) / s.segLen : 0;
+      return {
+        lat: s.lat1 + t * (s.lat2 - s.lat1),
+        lng: s.lng1 + t * (s.lng2 - s.lng1),
+      };
+    }
+  }
+  const last = track.segs[track.segs.length-1];
+  return {lat: last.lat2, lng: last.lng2};
+}
+
+const csxTrack = buildTrack(csxPts); // northbound = index 0, southbound = last index
+const fecTrack = buildTrack(fecPts);
+
+// Find fraction along track for a given station lat
+// (trains are referenced relative to Deerfield Beach station)
+function stationFraction(track, refLat) {
+  // Walk segments to find closest lat match
+  let best = 0, bestDist = Infinity;
+  for (let i = 0; i < track.segs.length; i++) {
+    const s = track.segs[i];
+    const midLat = (s.lat1+s.lat2)/2;
+    const d = Math.abs(midLat - refLat);
+    if (d < bestDist) { bestDist = d; best = (s.cumStart + s.segLen/2) / track.total; }
+  }
+  return best;
+}
+
+const csxStatFrac = stationFraction(csxTrack, STAT_LAT); // fraction of Deerfield Beach on CSX
+const fecStatFrac = stationFraction(fecTrack, STAT_LAT); // same lat on FEC
+
+// Train speed in track-fraction per minute
+// Total track ≈ 20 miles. At ~60 mph passenger → 1 min = 1/20 of track
+// In our degree-based system, total ≈ 0.6° lat → fraction-per-min = speed_mph / (20*60)
+// We'll compute actual track total lengths
+function speedToFracPerMin(track, mph) {
+  // track.total is in approx degrees; 1° lat ≈ 69 miles
+  const totalMiles = track.total * 69;
+  return mph / (totalMiles * 60); // fraction per minute
+}
+
+const SPEED_MPH = {tri:55, amtrak:60, brightline:90, fec:45, csx:40};
+
+function schedPos(t, sM) {
+  const track     = t.track === "fec" ? fecTrack : csxTrack;
+  const statFrac  = t.track === "fec" ? fecStatFrac : csxStatFrac;
+  const fpm       = speedToFracPerMin(track, SPEED_MPH[t.type] || 50);
+  const diff      = sM - t.mins; // minutes since/before station
+  // SB = moving from low fraction (north) to high fraction (south) → increasing fraction
+  // NB = moving from high fraction (south) to low fraction (north) → decreasing fraction
+  const fracOffset = t.dir === "SB" ? diff * fpm : -diff * fpm;
+  const frac = Math.max(0, Math.min(1, statFrac + fracOffset));
+  return posOnTrack(track, frac);
+}
+
+function onTrack(t, sM) {
+  const track     = t.track === "fec" ? fecTrack : csxTrack;
+  const statFrac  = t.track === "fec" ? fecStatFrac : csxStatFrac;
+  const fpm       = speedToFracPerMin(track, SPEED_MPH[t.type] || 50);
+  const diff      = sM - t.mins;
+  const fracOffset = t.dir === "SB" ? diff * fpm : -diff * fpm;
+  const frac      = statFrac + fracOffset;
+  return frac >= 0 && frac <= 1;
+}
+
+// ── Station markers ────────────────────────────────────────
+function stnPopup(name,sub,col){
+  return `<div><div style="color:${col};font-size:8px;letter-spacing:2px;margin-bottom:3px">STATION</div>
+    <b style="color:#fff;font-size:13px">${name}</b><br>
+    <span style="color:#6a8090;font-size:9px">${sub}</span></div>`;
+}
+function stnIcon(col,r){
+  return L.divIcon({
+    html:`<div style="width:${r*2}px;height:${r*2}px;border-radius:50%;background:${col};
+      border:2px solid #fff;box-shadow:0 0 8px ${col}88;margin:-${r}px 0 0 -${r}px"></div>`,
+    className:"",iconSize:[0,0],iconAnchor:[0,0]
+  });
+}
+[
+  // CSX/Tri-Rail stations — real coordinates
+  [26.742,-80.1120,"Mangonia Park",    "Tri-Rail N Terminus",     "#f5a623", 5],
+  [26.713,-80.1125,"West Palm Beach",  "Tri-Rail Station",        "#f5a623", 5],
+  [26.648,-80.1205,"Lake Worth Beach", "Tri-Rail Station",        "#f5a623", 5],
+  [26.499,-80.1220,"Delray Beach",     "Tri-Rail Station",        "#f5a623", 5],
+  [26.376,-80.1222,"Boca Raton",       "Tri-Rail Station",        "#f5a623", 5],
+  [26.317,-80.1222,"★ Deerfield Beach","Tri-Rail + Amtrak",       "#f5a623", 9],
+  [26.272,-80.1222,"Pompano Beach",    "Tri-Rail Station",        "#f5a623", 5],
+  [26.182,-80.1270,"Fort Lauderdale",  "Tri-Rail + Amtrak",       "#f5a623", 5],
+  [26.103,-80.1290,"Hollywood",        "Tri-Rail Station",        "#f5a623", 5],
+  [25.795,-80.2940,"Miami Airport",    "Tri-Rail S Terminus / MIA","#f5a623",5],
+  // FEC/Brightline stations — real coordinates
+  [26.713,-80.0535,"West Palm Beach",  "Brightline Station",      "#ff44ff", 5],
+  [26.356,-80.0925,"Boca Raton",       "Brightline Station",      "#ff44ff", 5],
+  [26.122,-80.1445,"Fort Lauderdale",  "Brightline Station",      "#ff44ff", 5],
+  [25.958,-80.1400,"Aventura",         "Brightline Station",      "#ff44ff", 5],
+  [25.845,-80.2130,"Hialeah Yard",     "FEC S Terminus / Miami",  "#ff44ff", 5],
+].forEach(([lat,lng,name,sub,col,r])=>{
+  L.marker([lat,lng],{icon:stnIcon(col,r)})
+    .bindPopup(stnPopup(name,sub,col)).addTo(map);
+});
+
+// ── YOU marker ─────────────────────────────────────────────
+L.marker([YOU_LAT, YOU_LNG], {
+  icon: L.divIcon({
+    html:`<div class="you-ring"><div class="you-dot"></div></div>`,
+    className:"",iconSize:[18,18],iconAnchor:[9,9]
+  }),
+  zIndexOffset: 2000
+}).bindPopup(
+  `<div><div style="color:#00ee77;font-size:8px;letter-spacing:2px;margin-bottom:3px">YOUR LOCATION</div>
+  <b style="color:#fff">26.310540, -80.128932</b><br>
+  <span style="color:#6a8090;font-size:9px">Deerfield Beach, FL</span></div>`
+).addTo(map);
+
+// ══════════════════════════════════════════════════════════
+// TRAIN ICON MARKERS
+// ══════════════════════════════════════════════════════════
+const markers = {};
+
+function trainIcon(type, emoji, col, dir, isLive, speed) {
+  const arr     = dir === "SB" ? "↓" : "↑";
+  const logoSrc = LOGOS[type] || "";
+  const glowStyle = isLive ? `filter:drop-shadow(0 0 5px gold) drop-shadow(0 0 3px #000)` : `filter:drop-shadow(0 0 3px #000)`;
+  const spdTxt  = speed ? `<div style="font-size:7px;font-weight:bold;background:rgba(0,0,0,.75);
+    color:${isLive?"#00ee77":"#a78bfa"};padding:1px 3px;border-radius:2px;
+    white-space:nowrap;text-align:center">${Math.round(speed)}mph</div>` : "";
+  return L.divIcon({
+    html: `<div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+      <div style="font-size:18px;line-height:1;${glowStyle};cursor:pointer">${emoji}</div>
+      <img src="${logoSrc}" style="width:34px;height:13px;object-fit:contain;
+        background:rgba(5,8,20,.82);border-radius:3px;padding:1px 2px;
+        border:1px solid ${col}66;display:block" alt="${type}"/>
+      <div style="font-size:8px;font-weight:bold;color:${col};
+        background:rgba(5,8,20,.82);border-radius:2px;padding:0 3px;
+        border:1px solid ${col}44;line-height:1.4">${arr}</div>
+      ${spdTxt}
+    </div>`,
+    className: "",
+    iconSize: [38, speed ? 58 : 46],
+    iconAnchor: [19, 10],
+    popupAnchor: [0, -14],
+  });
+}
+
+function putMarker(id, lat, lng, type, emoji, col, dir, isLive, popHtml, speed) {
+  const icon = trainIcon(type, emoji, col, dir, isLive, speed);
+  if (!markers[id]) {
+    markers[id] = L.marker([lat,lng], {
+      icon,
+      zIndexOffset: isLive ? 1500 : 600,
+    }).addTo(map);
+  } else {
+    markers[id].setLatLng([lat,lng]);
+    markers[id].setIcon(icon);
+  }
+  markers[id].unbindPopup();
+  markers[id].bindPopup(
+    `<div style="border-left:3px solid ${col};padding-left:8px">${popHtml}</div>`
+  );
+}
+
+const shownIds = new Set();
+function cullMarkers(keepIds) {
+  for (const id of shownIds) {
+    if (!keepIds.has(id) && markers[id]) map.removeLayer(markers[id]);
+  }
+  shownIds.clear();
+  keepIds.forEach(id => shownIds.add(id));
+}
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+let isLive=true, simSpeed=1, simTime=new Date(), lastRealMs=Date.now();
+let curFilter="all", liveData={}, lastFetch=0, apiGood=false;
+let desktopMode = false;
+
+// ── Mode toggle ────────────────────────────────────────────
+function toggleMode() {
+  desktopMode = !desktopMode;
+  const bodyEl = document.getElementById("body");
+  const btn    = document.getElementById("modeBtn");
+  if (desktopMode) {
+    bodyEl.classList.add("desktop");
+    btn.textContent = "📱";
+    btn.classList.add("on");
+  } else {
+    bodyEl.classList.remove("desktop");
+    btn.textContent = "🖥";
+    btn.classList.remove("on");
+  }
+  setTimeout(()=>map.invalidateSize(), 50);
+}
+// ── Locate / Center button ─────────────────────────────────
+document.getElementById("locateBtn").addEventListener("click", function() {
+  const btn = this;
+  btn.textContent = "⏳";
+  btn.style.borderColor = "#f5a623";
+  btn.style.color = "#f5a623";
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        map.setView([lat, lng], 14, {animate: true});
+        // Update YOU marker to live GPS position
+        if (window._youMarker) map.removeLayer(window._youMarker);
+        window._youMarker = L.marker([lat, lng], {
+          icon: L.divIcon({html:`<div class="you-ring"><div class="you-dot"></div></div>`,
+            className:"",iconSize:[18,18],iconAnchor:[9,9]}),
+          zIndexOffset:2000
+        }).bindPopup(
+          `<div><div style="color:#00ee77;font-size:8px;letter-spacing:2px;margin-bottom:3px">YOUR LIVE GPS</div>
+          <b style="color:#fff">${lat.toFixed(6)}, ${lng.toFixed(6)}</b><br>
+          <span style="color:#6a8090;font-size:9px">Accuracy: ±${Math.round(pos.coords.accuracy)}m</span></div>`
+        ).addTo(map).openPopup();
+        btn.textContent = "📍";
+        btn.style.borderColor = "#00ee77";
+        btn.style.color = "#00ee77";
+      },
+      err => {
+        // GPS denied or unavailable — fall back to stored position
+        map.setView([YOU_LAT, YOU_LNG], 15, {animate: true});
+        btn.textContent = "📍";
+        btn.style.borderColor = "#f5a623";
+        btn.style.color = "#f5a623";
+        btn.title = "GPS unavailable — showing saved position";
+      },
+      {enableHighAccuracy: true, timeout: 8000, maximumAge: 30000}
+    );
+  } else {
+    // Browser has no geolocation — use stored position
+    map.setView([YOU_LAT, YOU_LNG], 15, {animate: true});
+    btn.textContent = "📍";
+    btn.style.borderColor = "#f5a623";
+    btn.style.color = "#f5a623";
+  }
+});
+
+// ── Wire up ALL buttons here, safely inside window.onload ──
+document.getElementById("liveBtn").addEventListener("click", goLive);
+document.getElementById("s60").addEventListener("click", () => setSim(60));
+document.getElementById("s300").addEventListener("click", () => setSim(300));
+document.getElementById("modeBtn").addEventListener("click", toggleMode);
+document.getElementById("btnSat").addEventListener("click", () => setLayer("sat"));
+document.getElementById("btnOsm").addEventListener("click", () => setLayer("osm"));
+document.getElementById("btnDark").addEventListener("click", () => setLayer("dark"));
+document.getElementById("fAll").addEventListener("click",    function(){ setFilter("all",    this); });
+document.getElementById("fTri").addEventListener("click",    function(){ setFilter("tri",    this); });
+document.getElementById("fAmtrak").addEventListener("click", function(){ setFilter("amtrak", this); });
+document.getElementById("fBL").addEventListener("click",     function(){ setFilter("brightline", this); });
+document.getElementById("fFec").addEventListener("click",    function(){ setFilter("fec",    this); });
+document.getElementById("fCsx").addEventListener("click",    function(){ setFilter("csx",    this); });
+
+document.getElementById("btnWeather").addEventListener("click", toggleWeather);
+document.getElementById("histBtn").addEventListener("click", () => {
+  updateHistUI();
+  document.getElementById("historyPanel").classList.add("open");
+});
+document.getElementById("histClose").addEventListener("click", () => {
+  document.getElementById("historyPanel").classList.remove("open");
+});
+document.getElementById("histClear").addEventListener("click", () => {
+  if (confirm("Clear all logged trains?")) {
+    tripLog = []; loggedIds.clear(); saveLog(); updateHistUI();
+  }
+});
+document.getElementById("histExport").addEventListener("click", () => {
+  const csv = ["Date,Time,Train,Category,Direction,Cargo,Lat,Lng,Source"]
+    .concat(tripLog.map(e =>
+      `${e.date},${e.time},"${e.train}","${e.cat}",${e.dir},"${(e.cargo||"").replace(/"/g,"'")}",${e.lat},${e.lng},${e.auto?"auto":"manual"}`
+    )).join("\n");
+  navigator.clipboard.writeText(csv).then(() => alert("CSV copied to clipboard!")).catch(() => alert(csv));
+});
+
+// Always start in MOBILE mode — user taps 🖥 to switch to desktop
+// (auto-desktop was removed: artifact iframe width != real device width)
+
+function goLive() {
+  isLive=true; simTime=new Date(); lastRealMs=Date.now();
+  document.getElementById("liveBtn").className="on";
+  document.getElementById("s60").className="";
+  document.getElementById("s300").className="";
+  document.getElementById("liveindicator").className="isLive";
+  document.getElementById("liveindicator").textContent="●";
+}
+function setSim(sp) {
+  isLive=false; simSpeed=sp; lastRealMs=Date.now();
+  document.getElementById("liveBtn").className="";
+  document.getElementById("s60").className=sp===60?"on":"";
+  document.getElementById("s300").className=sp===300?"on":"";
+  document.getElementById("liveindicator").className="isSim";
+  document.getElementById("liveindicator").textContent="~";
+}
+function setFilter(f, btn) {
+  curFilter=f;
+  document.querySelectorAll("#filters button").forEach(b=>b.className="");
+  if(btn) btn.className="on";
+}
+// (button bindings done above via addEventListener)
+
+// ══════════════════════════════════════════════════════════
+// LIVE API — Amtraker (Amtrak + Brightline)
+// ══════════════════════════════════════════════════════════
+async function fetchLive() {
+  try {
+    const r = await fetch("https://api-v3.amtraker.com/v3/trains", {cache:"no-store"});
+    if (!r.ok) throw 0;
+    const data = await r.json();
+    const out = {};
+    for (const [num,trains] of Object.entries(data)) {
+      for (const t of trains) {
+        if (!t.lat||!t.lon) continue;
+        if (t.lat<MAP_S-1||t.lat>MAP_N+1) continue;
+        const isBL = String(t.trainNum||"").startsWith("b");
+        const id   = "live_"+(t.trainID||num);
+        const dir  = ["S","SE","SW"].some(h=>(t.heading||"").startsWith(h))?"SB":"NB";
+        out[id] = {
+          lat:t.lat, lng:t.lon, heading:t.heading||"",
+          name: t.routeName||(isBL?"Brightline":"Amtrak"),
+          num:  String(t.trainNum||num),
+          type: isBL?"brightline":"amtrak",
+          dir, speed:t.velocity||0,
+          updated: t.updatedAt?new Date(t.updatedAt):new Date(),
+        };
+      }
+    }
+    liveData=out; apiGood=true; lastFetch=Date.now();
+    document.getElementById("apistatus").textContent="📡 LIVE GPS";
+    document.getElementById("apistatus").style.color="#00ee77";
+  } catch {
+    apiGood=false;
+    document.getElementById("apistatus").textContent="📅 SCHEDULE";
+    document.getElementById("apistatus").style.color="#f5a623";
+  }
+}
+fetchLive();
+setInterval(fetchLive, 30000);
+
+// ══════════════════════════════════════════════════════════
+// FEATURE 9 — FREIGHT CARGO INFO
+// Based on FEC/CSX train symbols from botecomm.com schedules
+// ══════════════════════════════════════════════════════════
+const CARGO = {
+  // FEC trains
+  "FEC-107": "📦 UPS Intermodal piggyback trailers",
+  "FEC-101": "🚗 Intermodal + Auto racks (CSX/NS interchange)",
+  "FEC-105": "📦 UPS Hot — priority intermodal",
+  "FEC-109": "📦 Intermodal + manifest freight",
+  "FEC-191": "🗑 Waste Management containers (PEWWW!)",
+  "FEC-193": "🪨 Empty rock hoppers (return to Medley)",
+  "FEC-202": "📦 Intermodal — pigs & containers",
+  "FEC-206": "🚗 Mixed freight + auto racks",
+  "FEC-208": "🚂 Cleanup manifest — rock/pigs/tanks",
+  "FEC-210": "🚢 Crowley intermodal — Port Everglades",
+  "FEC-290": "🗑 Waste Management (northbound)",
+  "FEC-292": "🪨 Loaded pea rock hoppers → Fort Pierce",
+  "FEC-335": "🪨 Empty rock hoppers → City Point",
+  "FEC-336": "🪨 Loaded pea rock → Fort Pierce",
+  "FEC-945": "🏪 Local — Pompano Market spur (northbound)",
+  "FEC-960": "🏪 Local — Pompano Market spur (southbound)",
+  "FEC-121": "⛽ Global/Motiva fuel tanks (Thursday)",
+  // CSX trains
+  "CSX Q453":    "📦 Manifest freight southbound (daily)",
+  "CSX Q452":    "📦 Manifest freight northbound (daily)",
+  "CSX L459":    "📦 Sunday manifest southbound",
+  "CSX F05 Local":"🔧 Local freight / switching job",
+  "CSX Rock Train":"🪨 Rock/limestone unit train",
+  "CSX Mixed":   "📦 Mixed manifest — lumber/tanks/boxcars",
+  // Passenger
+  "#97 Silver Meteor": "🛌 Long-distance — NYC to Miami (sleepers+coaches)",
+  "#91 Silver Star":   "🛌 Long-distance — NYC to Miami (via Tampa)",
+  "#92 Silver Star":   "🛌 Long-distance — Miami to NYC (via Tampa)",
+  "#98 Silver Meteor": "🛌 Long-distance — Miami to NYC (sleepers+coaches)",
+};
+function getCargo(trainName) {
+  for (const [key, val] of Object.entries(CARGO)) {
+    if (trainName.includes(key)) return val;
+  }
+  if (trainName.startsWith("P6") || trainName.startsWith("P7")) return "🧑‍💼 Tri-Rail commuter passengers";
+  if (trainName.startsWith("BL")) return "🚄 Brightline inter-city passengers";
+  return null;
+}
+
+// ══════════════════════════════════════════════════════════
+// FEATURE 7 — QUIET ZONES & NOISE ZONES
+// Sources: FRA quiet zone database + local knowledge
+// Quiet zone = train does NOT sound horn at crossing (unless emergency)
+// ══════════════════════════════════════════════════════════
+const NOISE_ZONES = [
+  // [lat, label, type, radius_meters]
+  // CSX corridor quiet zones (established)
+  {lat:26.376, lng:-80.1222, label:"Boca Raton QZ",      type:"quiet",  r:1200},
+  {lat:26.317, lng:-80.1222, label:"Deerfield Beach QZ", type:"quiet",  r:900},
+  {lat:26.272, lng:-80.1222, label:"Pompano Beach QZ",   type:"quiet",  r:800},
+  // FEC corridor quiet zones
+  {lat:26.356, lng:-80.0925, label:"Boca Raton FEC QZ",  type:"quiet",  r:700},
+  {lat:26.180, lng:-80.090,  label:"Ft Laud FEC QZ",     type:"quiet",  r:600},
+  // Horn zones (active crossings — no quiet zone)
+  {lat:26.317, lng:-80.113,  label:"Hillsboro Blvd Crossing", type:"horn", r:200},
+  {lat:26.272, lng:-80.118,  label:"Atlantic Blvd Crossing",  type:"horn", r:200},
+  {lat:26.239, lng:-80.124,  label:"Cypress Creek Rd Crossing",type:"horn",r:200},
+];
+
+// Draw noise zone circles on map
+NOISE_ZONES.forEach(z => {
+  const isQuiet = z.type === "quiet";
+  L.circle([z.lat, z.lng], {
+    radius: z.r,
+    color:  isQuiet ? "#60a5fa" : "#f59e0b",
+    weight: 1,
+    fillColor: isQuiet ? "#60a5fa" : "#f59e0b",
+    fillOpacity: 0.06,
+    dashArray: isQuiet ? "4,4" : null,
+    interactive: false,
+  }).addTo(map)
+  .bindTooltip(`<span style="font-size:9px;font-family:monospace">${isQuiet?"🔕":"📢"} ${z.label}</span>`,
+    {permanent:false, direction:"top"});
+});
+
+// ══════════════════════════════════════════════════════════
+// FEATURE 5 — WEATHER OVERLAY
+// OpenWeatherMap precipitation tiles (free, no key needed for tile layer)
+// ══════════════════════════════════════════════════════════
+const weatherLayer = L.tileLayer(
+  "https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=YOUR_KEY",
+  {opacity:0.5, attribution:"© OpenWeatherMap", maxZoom:19}
+);
+// We use a free alternative that needs no key: RainViewer
+const rainLayer = L.tileLayer(
+  "https://tilecache.rainviewer.com/v2/radar/nowcast/256/{z}/{x}/{y}/2/1_1.png",
+  {opacity:0.55, attribution:"© RainViewer", maxZoom:15, tileSize:256}
+);
+let weatherOn = false;
+
+function toggleWeather() {
+  weatherOn = !weatherOn;
+  const btn = document.getElementById("btnWeather");
+  if (weatherOn) {
+    rainLayer.addTo(map);
+    btn.classList.add("on");
+    btn.textContent = "🌧 RAIN ●";
+  } else {
+    if (map.hasLayer(rainLayer)) map.removeLayer(rainLayer);
+    btn.classList.remove("on");
+    btn.textContent = "🌧 RAIN";
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// FEATURE 15 — TRIP HISTORY / TRAIN LOG
+// Auto-logs trains that pass within ~0.5mi of user position
+// Also stores manual entries via the log button
+// ══════════════════════════════════════════════════════════
+let tripLog = [];
+try { tripLog = JSON.parse(localStorage.getItem("railLog") || "[]"); } catch(e) { tripLog = []; }
+const loggedIds = new Set(tripLog.map(e => e.id)); // avoid double-logging same pass
+
+function saveLog() {
+  try { localStorage.setItem("railLog", JSON.stringify(tripLog.slice(-200))); } catch(e) {}
+}
+
+function logTrain(t, lat, lng, auto=true) {
+  const now   = new Date();
+  const entry = {
+    id:       t.train + "_" + Math.floor(now.getTime()/60000), // unique per minute
+    time:     now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",second:"2-digit"}),
+    date:     now.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"2-digit"}),
+    train:    t.train,
+    cat:      t.cat,
+    dir:      t.dir,
+    type:     t.type,
+    cargo:    getCargo(t.train) || "",
+    lat:      lat ? lat.toFixed(4) : YOU_LAT.toFixed(4),
+    lng:      lng ? lng.toFixed(4) : YOU_LNG.toFixed(4),
+    auto,
+  };
+  if (loggedIds.has(entry.id)) return;
+  loggedIds.add(entry.id);
+  tripLog.unshift(entry);
+  saveLog();
+  updateHistUI();
+}
+
+// Auto-detect trains passing near user (within ~0.8km = 0.007°)
+const PASS_THRESH = 0.008;
+function checkPassingTrains(sM) {
+  for (const t of ALL) {
+    if (!onTrack(t, sM)) continue;
+    const pos = schedPos(t, sM);
+    const dLat = Math.abs(pos.lat - YOU_LAT);
+    const dLng = Math.abs(pos.lng - YOU_LNG);
+    if (dLat < PASS_THRESH && dLng < PASS_THRESH) {
+      logTrain(t, pos.lat, pos.lng, true);
+    }
+  }
+}
+
+function updateHistUI() {
+  const el = document.getElementById("histList");
+  const cnt = document.getElementById("histCount");
+  if (cnt) cnt.textContent = tripLog.length ? `${tripLog.length} trains` : "";
+  if (!el) return;
+  if (!tripLog.length) {
+    el.innerHTML = `<div class="hist-empty">No trains logged yet.<br>Trains are automatically logged<br>when they pass near your position.</div>`;
+    return;
+  }
+  el.innerHTML = tripLog.map(e => {
+    const col = (PAL[e.type]||{})[e.dir] || "#888";
+    return `<div class="hist-row">
+      <div class="hist-dot" style="background:${col}"></div>
+      <div>
+        <div style="font-size:8px;color:#3a5060">${e.date}</div>
+        <div class="hist-time">${e.time}</div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="hist-name">${e.train}</div>
+        <div style="font-size:8px;color:#3a5060">${e.cat} · ${e.dir==="SB"?"↓":"↑"}
+          ${e.auto?"· 📍 auto":"· 👆 manual"}</div>
+        ${e.cargo?`<div style="font-size:8px;color:#ffb347;margin-top:1px">${e.cargo}</div>`:""}
+      </div>
+    </div>`;
+  }).join("");
+}
+updateHistUI();
+
+
+const pad   = n => String(Math.floor(Math.abs(n))).padStart(2,"0");
+const fmtT  = d => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const DAYS  = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+const fmtCd = dm => {
+  if(dm<0) dm+=1440;
+  const h=Math.floor(dm/60), m=Math.floor(dm%60), s=Math.floor((dm*60)%60);
+  return h>0?`${h}h ${m}m` : m>0?`${m}m ${pad(s)}s` : `${pad(s)}s ⚡`;
+};
+
+// ══════════════════════════════════════════════════════════
+// RENDER LOOP
+// ══════════════════════════════════════════════════════════
+function render() {
+  // Advance sim time
+  if (!isLive) {
+    const el = Date.now()-lastRealMs; lastRealMs=Date.now();
+    simTime = new Date(simTime.getTime()+el*simSpeed);
+  }
+  const now = isLive ? new Date() : simTime;
+  const sM  = now.getHours()*60 + now.getMinutes() + now.getSeconds()/60;
+
+  // Clock
+  document.getElementById("clock").textContent  = fmtT(now);
+
+  // ── Collect markers to show ───────────────────────────
+  const keepIds  = new Set();
+  const freshLive= apiGood && isLive && (Date.now()-lastFetch)<90000;
+  const liveTypes= new Set(Object.values(liveData).map(l=>l.type));
+
+  // 1. Live GPS dots (Amtrak + Brightline)
+  for (const [id, lt] of Object.entries(liveData)) {
+    const col   = tCol(lt);
+    const emoji = tEmoji(lt);
+    const age   = (Date.now()-lt.updated)/1000;
+    const ageStr= age>120 ? `<br><span style="color:#888;font-size:9px">${Math.round(age/60)}m ago</span>` : "";
+    const cargo = getCargo(lt.name) || getCargo(lt.num) || "";
+    const pop = `
+      <span style="color:${col};font-size:8px;letter-spacing:1px">${lt.type.toUpperCase()} · ${lt.dir==="SB"?"↓ SOUTH":"↑ NORTH"}</span><br>
+      <b style="color:#fff;font-size:14px">${emoji} ${lt.name}</b><br>
+      <span style="color:#6a8090;font-size:9px">Train #${lt.num}${ageStr}</span><br>
+      ${lt.speed?`<span style="color:#00ee77;font-size:11px;font-weight:bold">⚡ ${Math.round(lt.speed)} mph</span> · `:""}
+      <span style="color:#6a8090;font-size:9px">heading ${lt.heading}</span><br>
+      ${cargo?`<span style="color:#ffb347;font-size:9px">${cargo}</span><br>`:""}
+      <span style="color:#00ee77;font-size:9px">📡 LIVE GPS POSITION</span>`;
+    putMarker(id, lt.lat, lt.lng, lt.type, emoji, col, lt.dir, true, pop, lt.speed);
+    keepIds.add(id);
+  }
+
+  // 2. Schedule-interpolated
+  for (const t of ALL) {
+    if (!onTrack(t, sM)) continue;
+    if (freshLive && (t.type==="amtrak"||t.type==="brightline") && liveTypes.has(t.type)) continue;
+    const pos   = schedPos(t, sM);
+    const col   = tCol(t);
+    const emoji = tEmoji(t);
+    const id    = "sch_"+t.train+t.time;
+    const cargo = getCargo(t.train) || "";
+    const spd   = Math.round(SPEED_MPH[t.type] || 50);
+    const pop = `
+      <span style="color:${col};font-size:8px;letter-spacing:1px">${t.cat.toUpperCase()} · ${t.dir==="SB"?"↓ SOUTH":"↑ NORTH"}</span><br>
+      <b style="color:#fff;font-size:14px">${emoji} ${t.train}</b><br>
+      <span style="color:#6a8090;font-size:9px">Deerfield Beach: ${t.time}</span><br>
+      <span style="color:#a78bfa;font-size:11px;font-weight:bold">~ ${spd} mph</span><br>
+      ${cargo?`<span style="color:#ffb347;font-size:9px">${cargo}</span><br>`:""}
+      <span style="color:#f5a623;font-size:9px">📅 SCHEDULE-BASED</span>`;
+    putMarker(id, pos.lat, pos.lng, t.type, emoji, col, t.dir, false, pop, spd);
+    keepIds.add(id);
+  }
+
+  cullMarkers(keepIds);
+
+  // Auto-log passing trains (feature 15)
+  checkPassingTrains(sM);
+
+  // ── On-track bar ───────────────────────────────────────
+  const schOT   = ALL.filter(t=>onTrack(t,sM));
+  const liveCnt = Object.keys(liveData).length;
+  document.getElementById("otcount").textContent = Math.max(schOT.length, liveCnt);
+
+  const chips = [
+    ...Object.values(liveData).map(lt =>
+      `<span class="chip" style="color:${tCol(lt)};border-color:${tCol(lt)}44;background:${tCol(lt)}11">
+        📡 ${lt.dir==="SB"?"↓":"↑"} ${lt.name} #${lt.num}</span>`),
+    ...schOT.filter(t=>!(freshLive&&liveTypes.has(t.type))).map(t =>
+      `<span class="chip" style="color:${tCol(t)};border-color:${tCol(t)}44;background:${tCol(t)}11">
+        ${tEmoji(t)} ${t.dir==="SB"?"↓":"↑"} ${t.train}</span>`),
+  ];
+  const otbar = document.getElementById("otbar");
+  if (chips.length) {
+    otbar.style.display="block";
+    document.getElementById("otchips").innerHTML = chips.join("");
+  } else {
+    otbar.style.display="none";
+  }
+
+  // ── Next train ─────────────────────────────────────────
+  const filt     = ALL.filter(t=>curFilter==="all"||t.type===curFilter);
+  const upcoming = filt.filter(t=>t.mins>sM);
+  const next     = upcoming[0] ?? filt[0];
+  if (next) {
+    const dn  = next.mins>sM ? next.mins-sM : next.mins+1440-sM;
+    const col = tCol(next);
+    document.getElementById("ntime").textContent  = next.time;
+    document.getElementById("ntrain").textContent = `${tEmoji(next)} ${next.train}`;
+    document.getElementById("ntrain").style.color = col;
+    document.getElementById("nmeta").textContent  =
+      `${next.dir==="SB"?"↓ South":"↑ North"} · ${next.cat} · ${next.track==="fec"?"FEC":"CSX"}`;
+    document.getElementById("ncd").textContent = dn<0.1 ? "🚂 NOW" : fmtCd(dn);
+  }
+
+  // ── Schedule list ──────────────────────────────────────
+  const passed = filt.filter(t=>t.mins<=sM-1);
+  let html = "";
+
+  if (upcoming.length) {
+    html += `<div class="sec">UPCOMING — ${upcoming.length}</div>`;
+    upcoming.slice(0,22).forEach((t,i) => {
+      const col    = tCol(t);
+      const ot     = onTrack(t,sM);
+      const hasLive= freshLive && liveTypes.has(t.type);
+      const logoUrl= LOGOS[t.type] || "";
+      const schId  = "sch_"+t.train+t.time;
+      const cargo  = getCargo(t.train);
+      const spd    = Math.round(SPEED_MPH[t.type] || 50);
+      const logoHtml = `<img class="op-logo" src="${logoUrl}" alt="${t.cat}"/>`;
+      html += `<div class="trow" id="row-${schId}" data-trainid="${schId}"
+          style="${ot?`background:${col}0d;border-color:${col}44`:""}">
+        ${logoHtml}
+        <div class="ttime">${t.time}</div>
+        <div class="tinfo">
+          <div class="tname" style="color:${col}">${tEmoji(t)} ${t.train}</div>
+          <div class="tmeta">${t.dir==="SB"?"↓":"↑"} ${t.cat} · ${t.track==="fec"?"FEC":"CSX"} · <span style="color:#a78bfa">~${spd}mph</span></div>
+          ${cargo?`<div class="cargo-tag">${cargo}</div>`:""}
+        </div>
+        ${ot?`<div class="tbadge" style="color:${col};background:${col}20;border:1px solid ${col}55">
+          ${hasLive?"📡 LIVE":"📅 TRACK"}</div>`:""}
+      </div>`;
+    });
+  }
+  if (passed.length) {
+    html += `<div class="sec">PASSED TODAY — ${passed.length}</div>`;
+    passed.slice(-10).reverse().forEach(t => {
+      html += `<div class="prow">
+        <div class="pdot"></div>
+        <div class="ptime">${t.time}</div>
+        <div class="pname">${tEmoji(t)} ${t.train}</div>
+        <div class="pdir">${t.dir==="SB"?"↓":"↑"}</div>
+      </div>`;
+    });
+  }
+  document.getElementById("listscroll").innerHTML = html;
+
+  requestAnimationFrame(render);
+}
+
+// ── List ↔ Map cross-linking ───────────────────────────────
+let selectedId = null;
+function selectTrain(id) {
+  if (selectedId) {
+    const prev = document.getElementById("row-"+selectedId);
+    if (prev) prev.classList.remove("selected");
+    if (markers[selectedId]) markers[selectedId].closePopup();
+  }
+  if (selectedId === id) { selectedId = null; return; }
+  selectedId = id;
+  const row = document.getElementById("row-"+id);
+  if (row) { row.classList.add("selected"); row.scrollIntoView({block:"nearest",behavior:"smooth"}); }
+  if (markers[id]) {
+    map.panTo(markers[id].getLatLng(), {animate:true,duration:0.5});
+    setTimeout(()=>{ if(markers[id]) markers[id].openPopup(); }, 520);
+  }
+}
+// ── List row tap — event delegation (works on mobile) ──────
+document.getElementById("listscroll").addEventListener("click", function(e) {
+  const row = e.target.closest("[data-trainid]");
+  if (!row) return;
+  selectTrain(row.dataset.trainid);
+});
+document.getElementById("listscroll").addEventListener("touchend", function(e) {
+  const row = e.target.closest("[data-trainid]");
+  if (!row) return;
+  e.preventDefault();
+  selectTrain(row.dataset.trainid);
+}, {passive: false});
+
+requestAnimationFrame(render);
+
+}; // end window.onload
+
+// Register Service Worker for offline/PWA support
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js")
+      .then(r => console.log("SW registered:", r.scope))
+      .catch(e => console.log("SW failed:", e));
+  });
+}
+</script>
+</body>
+</html>
