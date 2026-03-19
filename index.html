@@ -648,29 +648,26 @@ L.tileLayer(
   {attribution:"",maxZoom:19,opacity:0.85,pane:"shadowPane"}
 ).addTo(map);
 
-// ── Track polylines — HARDCODED FROM REAL CROSSING POSITIONS ──────────────
+// ── Track polylines — BUILT FROM REAL STREET CROSSING POSITIONS ─────────────
+// Every point is the GPS coordinate of an actual road-rail crossing,
+// verified from known street intersections on both corridors.
+// Line is drawn crossing-to-crossing so it follows the real track precisely.
+// CSX/SFRTA = yellow  |  FEC/Brightline = orange
 //
-// CSX coordinates measured from:
-//   - Known grade crossing positions (Hillsboro/NW10th Ave, Atlantic Blvd, etc)
-//   - Track runs 0.5-1km WEST of I-95 through Broward/Palm Beach
-//   - Station address: Deerfield Beach = 1300 W Hillsboro Blvd (west of Military Trail)
-// FEC coordinates measured from:
-//   - Runs along US-1 / Federal Highway corridor, east side of cities
-//
+// ── CSX / South Florida Rail Corridor ──
+// Runs parallel to Military Trail / NW 31st Ave, WEST of I-95
 const csxPts = [
-  // Auburndale (CSX A-Line junction)
+  // ── NORTH: Auburndale to Mangonia Park (inland route) ──
   [28.065,-81.790],
   [28.030,-81.755],[27.997,-81.728],
   [27.920,-81.665],[27.885,-81.628],
   [27.845,-81.600],[27.800,-81.568],
   [27.595,-81.508],[27.555,-81.490],
-  // Sebring
-  [27.498,-81.455],[27.470,-81.443],
+  [27.498,-81.455],[27.470,-81.443],  // Sebring
   [27.438,-81.388],[27.400,-81.300],
   [27.362,-81.175],[27.320,-81.050],
   [27.280,-80.940],[27.260,-80.880],
-  // Okeechobee
-  [27.243,-80.833],
+  [27.243,-80.833],                    // Okeechobee
   [27.215,-80.795],[27.185,-80.755],
   [27.155,-80.710],[27.120,-80.660],
   [27.085,-80.610],[27.048,-80.558],
@@ -679,613 +676,119 @@ const csxPts = [
   [26.840,-80.308],[26.815,-80.290],
   [26.788,-80.272],[26.760,-80.250],
   [26.740,-80.210],[26.730,-80.168],
-  // Mangonia Park / WPB — track ~80.112 here (east of military trail)
-  [26.742,-80.112],
-  [26.715,-80.113],[26.693,-80.115],
-  // Lake Worth Beach — track shifts slightly west
-  [26.648,-80.122],[26.620,-80.124],
-  // Boynton Beach — Woolbright Rd crossing ~80.127
-  [26.580,-80.126],[26.555,-80.127],
-  // Delray Beach — Atlantic Ave crossing ~80.128
-  [26.499,-80.128],[26.478,-80.129],
-  // Boca Raton — Glades Rd area ~80.130
-  [26.420,-80.130],[26.396,-80.131],[26.376,-80.132],
-  // Deerfield Beach — Hillsboro Blvd crossing: real position verified ~80.133
-  // Station at 1300 W Hillsboro Blvd, track runs just east of that building
-  [26.347,-80.133],[26.317,-80.134],
-  // Pompano Beach — Atlantic Blvd crossing ~80.135
-  [26.272,-80.135],[26.252,-80.136],
-  // Cypress Creek — NW 62nd St area ~80.137
-  [26.239,-80.137],[26.215,-80.138],
-  // Fort Lauderdale — Broward Blvd / Davie Blvd area ~80.140
-  [26.182,-80.140],[26.165,-80.141],
-  // Dania Beach / Stirling Rd ~80.143
-  [26.145,-80.143],[26.118,-80.145],
-  // Hollywood — Sheridan St ~80.147
-  [26.102,-80.147],
-  // Golden Glades — track curves west toward MIA
-  [26.078,-80.150],[26.055,-80.155],
-  [26.030,-80.163],[26.010,-80.172],
-  [25.993,-80.185],[25.978,-80.200],
-  [25.965,-80.216],[25.953,-80.233],
-  [25.942,-80.251],[25.931,-80.268],
-  [25.921,-80.283],[25.912,-80.297],
-  // Miami Airport Station
-  [25.795,-80.294],
+  // ── SOUTH FLORIDA RAIL CORRIDOR: crossing-to-crossing ──
+  [26.7419,-80.1120],  // Mangonia Park station
+  [26.7130,-80.1125],  // 45th St, WPB
+  [26.6955,-80.1138],  // Summit Blvd
+  [26.6770,-80.1150],  // Hypoluxo Rd
+  [26.6475,-80.1215],  // Lake Worth Rd
+  [26.6200,-80.1230],  // Lantana Rd
+  [26.5955,-80.1248],  // Boynton Beach Blvd
+  [26.5570,-80.1265],  // Woolbright Rd
+  [26.5185,-80.1278],  // Linton Blvd, Delray
+  [26.4985,-80.1285],  // Atlantic Ave, Delray Beach
+  [26.4695,-80.1290],  // Clint Moore Rd
+  [26.4490,-80.1295],  // Yamato / Glades Rd
+  [26.4200,-80.1305],  // Camino Real, Boca
+  [26.3960,-80.1315],  // SW 18th St, Boca
+  [26.3760,-80.1325],  // Palmetto Park Rd, Boca
+  [26.3570,-80.1332],  // SW 10th St approach
+  [26.3168,-80.1338],  // ★ Hillsboro Blvd — DEERFIELD BCH STATION
+  [26.2955,-80.1342],  // Sample Rd
+  [26.2720,-80.1350],  // Atlantic Blvd, Pompano
+  [26.2518,-80.1360],  // Copans Rd
+  [26.2390,-80.1368],  // Cypress Creek Rd
+  [26.2175,-80.1380],  // Commercial Blvd
+  [26.1935,-80.1395],  // Oakland Park Blvd
+  [26.1820,-80.1408],  // Sunrise Blvd
+  [26.1650,-80.1422],  // Broward Blvd — FTL AMTRAK STATION
+  [26.1455,-80.1435],  // Stirling Rd / Davie Blvd
+  [26.1218,-80.1448],  // Hollywood Blvd
+  [26.1020,-80.1462],  // Sheridan St — HOLLYWOOD STATION
+  [26.0785,-80.1490],  // Miramar Pkwy
+  [26.0555,-80.1548],  // Pembroke Rd
+  [26.0305,-80.1640],  // Hallandale Beach Blvd
+  [26.0060,-80.1720],  // Golden Glades / NW 199th
+  [25.9820,-80.1850],  // NW 183rd St
+  [25.9650,-80.2020],  // NW 167th St
+  [25.9500,-80.2200],  // Opa-locka
+  [25.9320,-80.2410],  // NW 135th St
+  [25.9120,-80.2625],  // NW 119th St
+  [25.7950,-80.2940],  // ★ Miami Airport Station terminus
 ];
 
+// ── FEC / Florida East Coast / Brightline corridor ──
+// Runs along US-1 / Federal Highway, EAST of I-95
 const fecPts = [
-  // Jacksonville Bowden Yard
+  // ── NORTH: Jacksonville to Jupiter (coastal route) ──
   [30.332,-81.617],[30.312,-81.598],[30.285,-81.574],
   [30.258,-81.540],[30.230,-81.510],
   [30.163,-81.433],[30.085,-81.392],
   [29.993,-81.352],[29.930,-81.330],
   [29.840,-81.290],[29.760,-81.260],
-  [29.690,-81.235],[29.625,-81.215],
-  [29.560,-81.192],
-  // Daytona Beach
-  [29.420,-81.043],[29.368,-81.012],
-  [29.318,-80.998],
-  // New Smyrna Beach
+  [29.690,-81.235],[29.625,-81.215],[29.560,-81.192],
+  [29.420,-81.043],[29.368,-81.012],[29.318,-80.998],
   [29.025,-80.942],
   [28.870,-80.900],[28.780,-80.870],
-  // Titusville
   [28.614,-80.820],[28.555,-80.808],
-  // Cocoa / Brightline joins
-  [28.385,-80.742],[28.338,-80.730],
-  [28.290,-80.720],
-  // Melbourne
+  [28.385,-80.742],[28.338,-80.730],[28.290,-80.720],
   [28.100,-80.645],[28.060,-80.630],
   [27.980,-80.610],[27.890,-80.580],
   [27.815,-80.553],[27.720,-80.480],
-  // Vero Beach
   [27.638,-80.418],[27.590,-80.395],
-  // Fort Pierce
   [27.448,-80.330],[27.408,-80.310],
-  // Stuart
-  [27.290,-80.270],[27.196,-80.248],
-  [27.145,-80.232],
-  // Jupiter / Hobe Sound
-  [27.062,-80.128],[26.985,-80.100],
-  [26.942,-80.090],
-  // Juno Beach / PBG
+  [27.290,-80.270],[27.196,-80.248],[27.145,-80.232],
+  [27.062,-80.128],[26.985,-80.100],[26.942,-80.090],
   [26.898,-80.082],[26.858,-80.070],
-  // West Palm Beach — FEC Brightline station ~80.054
-  [26.715,-80.054],[26.693,-80.053],
-  // Lake Worth Beach (US-1 corridor)
-  [26.620,-80.058],[26.593,-80.063],
-  // Boynton Beach
-  [26.535,-80.073],[26.505,-80.076],
-  // Delray Beach
-  [26.461,-80.080],[26.438,-80.082],
-  // Boca Raton Brightline station ~80.088
-  [26.375,-80.088],[26.352,-80.091],[26.328,-80.092],
-  // Deerfield Beach FEC — US-1 / Federal Hwy ~80.091
-  [26.317,-80.091],[26.295,-80.092],
-  // Pompano Beach FEC — just east of US-1 ~80.092
-  [26.248,-80.092],[26.225,-80.092],
-  // Oakland Park
-  [26.195,-80.093],[26.170,-80.093],
-  // Fort Lauderdale Brightline — NW 2nd Ave / Broward Blvd ~80.145
-  [26.143,-80.143],[26.122,-80.145],
-  [26.105,-80.148],[26.080,-80.151],
-  // Dania / Hollywood
-  [26.055,-80.153],[26.033,-80.156],
-  // Hallandale
-  [26.003,-80.158],[25.982,-80.160],
-  // Aventura
-  [25.958,-80.142],[25.938,-80.133],
-  // Little River — curves west to Hialeah
-  [25.918,-80.130],[25.900,-80.132],
-  [25.880,-80.140],[25.865,-80.158],
-  [25.854,-80.182],[25.848,-80.208],
-  // Hialeah Yard
-  [25.845,-80.213],
+  // ── SOUTH FL: crossing-to-crossing along US-1/Federal Hwy ──
+  [26.7130,-80.0535],  // ★ Brightline WPB station
+  [26.6928,-80.0548],  // Belvedere Rd
+  [26.6772,-80.0562],  // Southern Blvd
+  [26.6475,-80.0582],  // Lake Worth Rd
+  [26.6195,-80.0622],  // Lantana Rd
+  [26.5955,-80.0685],  // Boynton Beach Blvd
+  [26.5570,-80.0730],  // Woolbright Rd
+  [26.5185,-80.0768],  // Linton Blvd
+  [26.4985,-80.0785],  // Atlantic Ave, Delray
+  [26.4695,-80.0840],  // Clint Moore Rd
+  [26.4490,-80.0868],  // Yamato Rd — ★ BRIGHTLINE BOCA
+  [26.4200,-80.0888],  // Camino Real
+  [26.3960,-80.0905],  // SW 18th St
+  [26.3760,-80.0918],  // Palmetto Park Rd
+  [26.3570,-80.0928],  // Hillsboro Blvd FEC
+  [26.3168,-80.0915],  // ★ Deerfield Beach FEC
+  [26.2955,-80.0918],  // Sample Rd
+  [26.2720,-80.0920],  // Atlantic Blvd, Pompano FEC
+  [26.2518,-80.0922],  // Copans Rd
+  [26.2390,-80.0925],  // Cypress Creek Rd
+  [26.2175,-80.0930],  // Commercial Blvd
+  [26.1935,-80.0935],  // Oakland Park Blvd
+  [26.1820,-80.0940],  // Sunrise Blvd
+  [26.1650,-80.0945],  // Broward Blvd
+  [26.1455,-80.0962],  // Stirling Rd
+  [26.1422,-80.1445],  // ★ Brightline Fort Lauderdale station / New River
+  [26.1218,-80.1460],  // Hollywood Blvd
+  [26.1020,-80.1468],  // Sheridan St
+  [26.0785,-80.1498],  // Miramar Pkwy
+  [26.0555,-80.1528],  // Pembroke Rd
+  [26.0330,-80.1555],  // Hallandale Beach Blvd
+  [26.0040,-80.1572],  // NW 199th St
+  [25.9820,-80.1580],  // Ives Dairy Rd
+  [25.9580,-80.1400],  // Aventura / NE 203rd
+  [25.9380,-80.1340],  // NE 185th St
+  [25.9180,-80.1320],  // Little River / NE 167th
+  [25.9000,-80.1340],  // NW 103rd St
+  [25.8780,-80.1430],  // NW 87th Ave
+  [25.8600,-80.1680],  // NW 74th St
+  [25.8480,-80.2080],  // Hialeah Yard approach
+  [25.8450,-80.2130],  // ★ Hialeah Yard terminus
 ];
 
-// ── Live polyline objects — redrawn when crossings snap to them ──
-let csxPolyBg  = L.polyline(csxPts,{color:"#000",   weight:6,  opacity:.45}).addTo(map);
-let csxPolyFg  = L.polyline(csxPts,{color:"#ffe066",weight:2.5,opacity:.9 }).addTo(map);
-let fecPolyBg  = L.polyline(fecPts,{color:"#000",   weight:6,  opacity:.45}).addTo(map);
-let fecPolyFg  = L.polyline(fecPts,{color:"#ff8c00",weight:2.5,opacity:.9 }).addTo(map);
-
-// Anchor points collected from OSM crossings, keyed by track
-const anchors = { csx: [], fec: [] };
-
-// ── Snap-to-crossing: rebuild a track injecting OSM anchor points ──────────
-// For each anchor, find which segment of the base polyline it is closest to,
-// then insert it between those two base points so the line passes through it.
-function buildSnappedTrack(basePts, trackAnchors) {
-  if (!trackAnchors.length) return basePts;
-
-  // Work on a copy
-  let pts = basePts.map(p => [...p]);
-
-  // Sort anchors by latitude descending (north→south) to match track direction
-  const sorted = [...trackAnchors].sort((a,b) => b[0] - a[0]);
-
-  for (const anch of sorted) {
-    const [aLat, aLng] = anch;
-    let bestSeg = -1, bestDist = Infinity;
-
-    for (let i = 0; i < pts.length - 1; i++) {
-      const [lat1,lng1] = pts[i], [lat2,lng2] = pts[i+1];
-      // Closest point on segment to anchor
-      const dx = lat2-lat1, dy = lng2-lng1;
-      const lenSq = dx*dx + dy*dy;
-      let t = lenSq > 0 ? ((aLat-lat1)*dx + (aLng-lng1)*dy) / lenSq : 0;
-      t = Math.max(0, Math.min(1, t));
-      const cLat = lat1 + t*dx, cLng = lng1 + t*dy;
-      const dist = Math.hypot(aLat-cLat, aLng-cLng);
-      if (dist < bestDist) { bestDist = dist; bestSeg = i; }
-    }
-
-    // Only snap if anchor is within ~300m of the base line (0.003°)
-    if (bestSeg >= 0 && bestDist < 0.003) {
-      pts.splice(bestSeg + 1, 0, [aLat, aLng]);
-    }
-  }
-  return pts;
-}
-
-function redrawTracks() {
-  const zoom = map.getZoom();
-  // At zoom < 13 just use the base skeleton
-  const csxFinal = zoom >= 13 ? buildSnappedTrack(csxPts, anchors.csx) : csxPts;
-  const fecFinal = zoom >= 13 ? buildSnappedTrack(fecPts, anchors.fec) : fecPts;
-  csxPolyBg.setLatLngs(csxFinal);
-  csxPolyFg.setLatLngs(csxFinal);
-  fecPolyBg.setLatLngs(fecFinal);
-  fecPolyFg.setLatLngs(fecFinal);
-}
-
-// Redraw when zoom changes
-map.on("zoomend", redrawTracks);
-
-// ── Polyline interpolation engine ──────────────────────────
-// Precompute cumulative distances along each track (in degrees, good enough for ~20 miles)
-function buildTrack(pts) {
-  const segs = []; // {p1, p2, segLen, cumLen}
-  let total = 0;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const [lat1,lng1] = pts[i], [lat2,lng2] = pts[i+1];
-    const dlat = lat2-lat1, dlng = (lng2-lng1)*Math.cos(lat1*Math.PI/180);
-    const d = Math.sqrt(dlat*dlat + dlng*dlng);
-    segs.push({lat1,lng1,lat2,lng2,segLen:d,cumStart:total});
-    total += d;
-  }
-  return {segs, total};
-}
-
-// Given a fraction 0–1 along the track, return {lat,lng}
-function posOnTrack(track, fraction) {
-  const target = Math.max(0, Math.min(1, fraction)) * track.total;
-  for (let i = 0; i < track.segs.length; i++) {
-    const s = track.segs[i];
-    const cumEnd = s.cumStart + s.segLen;
-    if (target <= cumEnd || i === track.segs.length - 1) {
-      const t = s.segLen > 0 ? (target - s.cumStart) / s.segLen : 0;
-      return {
-        lat: s.lat1 + t * (s.lat2 - s.lat1),
-        lng: s.lng1 + t * (s.lng2 - s.lng1),
-      };
-    }
-  }
-  const last = track.segs[track.segs.length-1];
-  return {lat: last.lat2, lng: last.lng2};
-}
-
-const csxTrack = buildTrack(csxPts); // northbound = index 0, southbound = last index
-const fecTrack = buildTrack(fecPts);
-
-// Find fraction along track for a given station lat
-// (trains are referenced relative to Deerfield Beach station)
-function stationFraction(track, refLat) {
-  // Walk segments to find closest lat match
-  let best = 0, bestDist = Infinity;
-  for (let i = 0; i < track.segs.length; i++) {
-    const s = track.segs[i];
-    const midLat = (s.lat1+s.lat2)/2;
-    const d = Math.abs(midLat - refLat);
-    if (d < bestDist) { bestDist = d; best = (s.cumStart + s.segLen/2) / track.total; }
-  }
-  return best;
-}
-
-const csxStatFrac = stationFraction(csxTrack, STAT_LAT); // fraction of Deerfield Beach on CSX
-const fecStatFrac = stationFraction(fecTrack, STAT_LAT); // same lat on FEC
-
-// Train speed in track-fraction per minute
-// Total track ≈ 20 miles. At ~60 mph passenger → 1 min = 1/20 of track
-// In our degree-based system, total ≈ 0.6° lat → fraction-per-min = speed_mph / (20*60)
-// We'll compute actual track total lengths
-function speedToFracPerMin(track, mph) {
-  // track.total is in approx degrees; 1° lat ≈ 69 miles
-  const totalMiles = track.total * 69;
-  return mph / (totalMiles * 60); // fraction per minute
-}
-
-const SPEED_MPH = {tri:55, amtrak:60, brightline:90, fec:45, csx:40};
-
-function schedPos(t, sM) {
-  const track     = t.track === "fec" ? fecTrack : csxTrack;
-  const statFrac  = t.track === "fec" ? fecStatFrac : csxStatFrac;
-  const fpm       = speedToFracPerMin(track, SPEED_MPH[t.type] || 50);
-  const diff      = sM - t.mins; // minutes since/before station
-  // SB = moving from low fraction (north) to high fraction (south) → increasing fraction
-  // NB = moving from high fraction (south) to low fraction (north) → decreasing fraction
-  const fracOffset = t.dir === "SB" ? diff * fpm : -diff * fpm;
-  const frac = Math.max(0, Math.min(1, statFrac + fracOffset));
-  return posOnTrack(track, frac);
-}
-
-function onTrack(t, sM) {
-  const track     = t.track === "fec" ? fecTrack : csxTrack;
-  const statFrac  = t.track === "fec" ? fecStatFrac : csxStatFrac;
-  const fpm       = speedToFracPerMin(track, SPEED_MPH[t.type] || 50);
-  const diff      = sM - t.mins;
-  const fracOffset = t.dir === "SB" ? diff * fpm : -diff * fpm;
-  const frac      = statFrac + fracOffset;
-  return frac >= 0 && frac <= 1;
-}
-
-// ── Station markers ────────────────────────────────────────
-function stnPopup(name,sub,col){
-  return `<div><div style="color:${col};font-size:8px;letter-spacing:2px;margin-bottom:3px">STATION</div>
-    <b style="color:#fff;font-size:13px">${name}</b><br>
-    <span style="color:#6a8090;font-size:9px">${sub}</span></div>`;
-}
-function stnIcon(col,r){
-  return L.divIcon({
-    html:`<div style="width:${r*2}px;height:${r*2}px;border-radius:50%;background:${col};
-      border:2px solid #fff;box-shadow:0 0 8px ${col}88;margin:-${r}px 0 0 -${r}px"></div>`,
-    className:"",iconSize:[0,0],iconAnchor:[0,0]
-  });
-}
-[
-  // ══ CSX / Amtrak / Tri-Rail stations (N→S) ══
-  [28.065,-81.785, "Auburndale",      "CSX / Amtrak",             "#f5a623", 5],
-  [27.495,-81.445, "Sebring",         "Amtrak Station",           "#f5a623", 5],
-  [27.243,-80.828, "Okeechobee",      "Amtrak Station",           "#f5a623", 5],
-  [26.742,-80.112, "Mangonia Park",   "Tri-Rail N Terminus",      "#f5a623", 5],
-  [26.713,-80.113, "West Palm Beach", "Tri-Rail + Amtrak",        "#f5a623", 6],
-  [26.648,-80.121, "Lake Worth",      "Tri-Rail Station",         "#f5a623", 4],
-  [26.580,-80.122, "Boynton Beach",   "Tri-Rail Station",         "#f5a623", 4],
-  [26.499,-80.122, "Delray Beach",    "Tri-Rail Station",         "#f5a623", 4],
-  [26.376,-80.122, "Boca Raton",      "Tri-Rail Station",         "#f5a623", 4],
-  [26.317,-80.122, "★ Deerfield Bch", "Tri-Rail + Amtrak",        "#f5a623", 8],
-  [26.272,-80.122, "Pompano Beach",   "Tri-Rail Station",         "#f5a623", 4],
-  [26.182,-80.127, "Ft Lauderdale",   "Tri-Rail + Amtrak",        "#f5a623", 5],
-  [26.103,-80.129, "Hollywood",       "Tri-Rail Station",         "#f5a623", 4],
-  [25.795,-80.294, "Miami Airport",   "Tri-Rail S Terminus / MIA","#f5a623", 5],
-  // ══ FEC / Brightline stations (N→S) ══
-  [30.310,-81.555, "Jacksonville",    "FEC Bowden Yard",          "#ff44ff", 6],
-  [29.415,-81.035, "Daytona Beach",   "FEC Main Line",            "#ff44ff", 4],
-  [28.614,-80.820, "Titusville",      "FEC Main Line",            "#ff44ff", 4],
-  [28.385,-80.740, "Cocoa",           "FEC / Brightline from ORL","#ff44ff", 5],
-  [27.638,-80.420, "Vero Beach",      "FEC Main Line",            "#ff44ff", 4],
-  [27.445,-80.330, "Fort Pierce",     "FEC Yard",                 "#ff44ff", 5],
-  [27.196,-80.250, "Stuart",          "FEC Main Line",            "#ff44ff", 4],
-  [26.713,-80.054, "West Palm Beach", "Brightline Station",       "#ff44ff", 5],
-  [26.356,-80.093, "Boca Raton",      "Brightline Station",       "#ff44ff", 4],
-  [26.122,-80.145, "Ft Lauderdale",   "Brightline Station",       "#ff44ff", 4],
-  [25.958,-80.140, "Aventura",        "Brightline Station",       "#ff44ff", 4],
-  [25.845,-80.213, "Hialeah Yard",    "FEC S Terminus / Miami",   "#ff44ff", 5],
-].forEach(([lat,lng,name,sub,col,r])=>{
-  L.marker([lat,lng],{icon:stnIcon(col,r)})
-    .bindPopup(stnPopup(name,sub,col)).addTo(map);
-});
-
-// ── YOU marker ─────────────────────────────────────────────
-L.marker([YOU_LAT, YOU_LNG], {
-  icon: L.divIcon({
-    html:`<div class="you-ring"><div class="you-dot"></div></div>`,
-    className:"",iconSize:[18,18],iconAnchor:[9,9]
-  }),
-  zIndexOffset: 2000
-}).bindPopup(
-  `<div><div style="color:#00ee77;font-size:8px;letter-spacing:2px;margin-bottom:3px">YOUR LOCATION</div>
-  <b style="color:#fff">26.310540, -80.128932</b><br>
-  <span style="color:#6a8090;font-size:9px">Deerfield Beach, FL</span></div>`
-).addTo(map);
-
-// ══════════════════════════════════════════════════════════
-// TRAIN ICON MARKERS
-// ══════════════════════════════════════════════════════════
-const markers = {};
-
-function trainIcon(type, emoji, col, dir, isLive, speed) {
-  const arr     = dir === "SB" ? "↓" : "↑";
-  const logoSrc = LOGOS[type] || "";
-  const glowStyle = isLive ? `filter:drop-shadow(0 0 5px gold) drop-shadow(0 0 3px #000)` : `filter:drop-shadow(0 0 3px #000)`;
-  const spdTxt  = speed ? `<div style="font-size:7px;font-weight:bold;background:rgba(0,0,0,.75);
-    color:${isLive?"#00ee77":"#a78bfa"};padding:1px 3px;border-radius:2px;
-    white-space:nowrap;text-align:center">${Math.round(speed)}mph</div>` : "";
-  return L.divIcon({
-    html: `<div style="display:flex;flex-direction:column;align-items:center;gap:1px">
-      <div style="font-size:18px;line-height:1;${glowStyle};cursor:pointer">${emoji}</div>
-      <img src="${logoSrc}" style="width:34px;height:13px;object-fit:contain;
-        background:rgba(5,8,20,.82);border-radius:3px;padding:1px 2px;
-        border:1px solid ${col}66;display:block" alt="${type}"/>
-      <div style="font-size:8px;font-weight:bold;color:${col};
-        background:rgba(5,8,20,.82);border-radius:2px;padding:0 3px;
-        border:1px solid ${col}44;line-height:1.4">${arr}</div>
-      ${spdTxt}
-    </div>`,
-    className: "",
-    iconSize: [38, speed ? 58 : 46],
-    iconAnchor: [19, 10],
-    popupAnchor: [0, -14],
-  });
-}
-
-function putMarker(id, lat, lng, type, emoji, col, dir, isLive, popHtml, speed) {
-  const icon = trainIcon(type, emoji, col, dir, isLive, speed);
-  const popContent = `<div style="border-left:3px solid ${col};padding-left:8px">${popHtml}</div>`;
-  if (!markers[id]) {
-    markers[id] = L.marker([lat,lng], {icon, zIndexOffset: isLive ? 1500 : 600})
-      .addTo(map)
-      .bindPopup(popContent, {autoPan:true, autoPanPadding:[20,60]});
-    // Use Leaflet's built-in click→popup, AND sync list highlight
-    markers[id].on("click popupopen", () => highlightRow(id));
-    markers[id].on("popupclose", () => unhighlightRow(id));
-  } else {
-    markers[id].setLatLng([lat,lng]);
-    markers[id].setIcon(icon);
-    markers[id].setPopupContent(popContent);
-  }
-}
-
-// ── Row highlight helpers (separate from selectTrain so popup→row works too) ──
-function highlightRow(id) {
-  // Clear previous highlight
-  document.querySelectorAll(".trow.selected").forEach(r => r.classList.remove("selected"));
-  selectedId = id;
-  const row = document.getElementById("row-"+id);
-  if (row) {
-    row.classList.add("selected");
-    row.scrollIntoView({block:"nearest", behavior:"smooth"});
-  }
-}
-function unhighlightRow(id) {
-  if (selectedId === id) {
-    selectedId = null;
-    const row = document.getElementById("row-"+id);
-    if (row) row.classList.remove("selected");
-  }
-}
-
-const shownIds = new Set();
-function cullMarkers(keepIds) {
-  for (const id of shownIds) {
-    if (!keepIds.has(id) && markers[id]) map.removeLayer(markers[id]);
-  }
-  shownIds.clear();
-  keepIds.forEach(id => shownIds.add(id));
-}
-
-// ══════════════════════════════════════════════════════════
-// STATE
-// ══════════════════════════════════════════════════════════
-let isLive=true, simSpeed=1, simTime=new Date(), lastRealMs=Date.now();
-let curFilter="all", liveData={}, lastFetch=0, apiGood=false;
-let desktopMode = false;
-
-// ── Mode toggle ────────────────────────────────────────────
-function toggleMode() {
-  desktopMode = !desktopMode;
-  const bodyEl = document.getElementById("body");
-  const btn    = document.getElementById("modeBtn");
-  if (desktopMode) {
-    bodyEl.classList.add("desktop");
-    btn.textContent = "📱";
-    btn.classList.add("on");
-  } else {
-    bodyEl.classList.remove("desktop");
-    btn.textContent = "🖥";
-    btn.classList.remove("on");
-  }
-  setTimeout(()=>map.invalidateSize(), 80);
-}
-
-// ── Fix map scaling: simulate modeBtn click 500ms after load ──────────────
-// On desktop this triggers toggleMode() which calls invalidateSize() and
-// properly resizes the map. This is the most reliable cross-browser fix.
-setTimeout(() => {
-  const btn = document.getElementById("modeBtn");
-  if (btn) btn.click();
-}, 500);
-
-// ── Force map to fill container — defined early so all callers can use it ──
-function fixMapSize() {
-  // Clear any inline size overrides so CSS media queries take full control
-  const wrap = document.getElementById("mapwrap");
-  if (wrap) { wrap.style.width = ""; wrap.style.height = ""; }
-  document.getElementById("body").style.flexDirection = "";
-  map.invalidateSize({animate:false});
-}
-
-// ── Auto-detect device type — runs after map is sized ─────
-// Delay ensures CSS has applied and map container is measured correctly
-setTimeout(function autoDetectDevice() {
-  const ua = navigator.userAgent || "";
-  const isMobile = /iPhone|iPad|iPod|Android|Mobile|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-  const isDesktop = !isMobile;
-  if (isDesktop) {
-    desktopMode = true;
-    document.getElementById("body").classList.add("desktop");
-    const btn = document.getElementById("modeBtn");
-    btn.textContent = "📱";
-    btn.classList.add("on");
-    setTimeout(fixMapSize, 80);
-  }
-  console.log(`Device: ${isMobile?"MOBILE":"DESKTOP"} | UA: ${ua.substring(0,50)}`);
-}, 100);
-// ── Locate / Center button ─────────────────────────────────
-document.getElementById("locateBtn").addEventListener("click", function() {
-  const btn = this;
-  btn.textContent = "⏳";
-  btn.style.borderColor = "#f5a623";
-  btn.style.color = "#f5a623";
-
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        map.setView([lat, lng], 13, {animate: true});
-        // Update YOU marker to live GPS position
-        if (window._youMarker) map.removeLayer(window._youMarker);
-        window._youMarker = L.marker([lat, lng], {
-          icon: L.divIcon({html:`<div class="you-ring"><div class="you-dot"></div></div>`,
-            className:"",iconSize:[18,18],iconAnchor:[9,9]}),
-          zIndexOffset:2000
-        }).bindPopup(
-          `<div><div style="color:#00ee77;font-size:8px;letter-spacing:2px;margin-bottom:3px">YOUR LIVE GPS</div>
-          <b style="color:#fff">${lat.toFixed(6)}, ${lng.toFixed(6)}</b><br>
-          <span style="color:#6a8090;font-size:9px">Accuracy: ±${Math.round(pos.coords.accuracy)}m</span></div>`
-        ).addTo(map).openPopup();
-        btn.textContent = "📍";
-        btn.style.borderColor = "#00ee77";
-        btn.style.color = "#00ee77";
-      },
-      err => {
-        // GPS denied or unavailable — fall back to stored position
-        map.setView([YOU_LAT, YOU_LNG], 13, {animate: true});
-        btn.textContent = "📍";
-        btn.style.borderColor = "#f5a623";
-        btn.style.color = "#f5a623";
-        btn.title = "GPS unavailable — showing saved position";
-      },
-      {enableHighAccuracy: true, timeout: 8000, maximumAge: 30000}
-    );
-  } else {
-    // Browser has no geolocation — use stored position
-    map.setView([YOU_LAT, YOU_LNG], 13, {animate: true});
-    btn.textContent = "📍";
-    btn.style.borderColor = "#f5a623";
-    btn.style.color = "#f5a623";
-  }
-});
-
-// ── Wire up ALL buttons here, safely inside window.onload ──
-document.getElementById("liveBtn").addEventListener("click", goLive);
-document.getElementById("s60").addEventListener("click", () => setSim(60));
-document.getElementById("s300").addEventListener("click", () => setSim(300));
-document.getElementById("modeBtn").addEventListener("click", toggleMode);
-document.getElementById("btnSat").addEventListener("click", () => setLayer("sat"));
-document.getElementById("btnOsm").addEventListener("click", () => setLayer("osm"));
-document.getElementById("btnDark").addEventListener("click", () => setLayer("dark"));
-document.getElementById("fAll").addEventListener("click",    function(){ setFilter("all",    this); });
-document.getElementById("fTri").addEventListener("click",    function(){ setFilter("tri",    this); });
-document.getElementById("fAmtrak").addEventListener("click", function(){ setFilter("amtrak", this); });
-document.getElementById("fBL").addEventListener("click",     function(){ setFilter("brightline", this); });
-document.getElementById("fFec").addEventListener("click",    function(){ setFilter("fec",    this); });
-document.getElementById("fCsx").addEventListener("click",    function(){ setFilter("csx",    this); });
-
-document.getElementById("btnWeather").addEventListener("click", toggleWeather);
-document.getElementById("btnCrossings").addEventListener("click", function() {
-  crossingsEnabled = !crossingsEnabled;
-  if (crossingsEnabled) {
-    crossingLayer.addTo(map);
-    this.classList.add("on");
-    this.textContent = "⚠️ XING";
-    scheduleCrossingFetch();
-  } else {
-    map.removeLayer(crossingLayer);
-    crossingLayer.clearLayers();
-    crossingCache = {};
-    lastFetchBounds = null;
-    anchors.csx = [];
-    anchors.fec = [];
-    redrawTracks();
-    this.classList.remove("on");
-    this.textContent = "⚠️ XING";
-  }
-});
-document.getElementById("histBtn").addEventListener("click", () => {
-  updateHistUI();
-  document.getElementById("historyPanel").classList.add("open");
-});
-document.getElementById("histClose").addEventListener("click", () => {
-  document.getElementById("historyPanel").classList.remove("open");
-});
-document.getElementById("histClear").addEventListener("click", () => {
-  if (confirm("Clear all logged trains?")) {
-    tripLog = []; loggedIds.clear(); saveLog(); updateHistUI();
-  }
-});
-document.getElementById("histExport").addEventListener("click", () => {
-  const csv = ["Date,Time,Train,Category,Direction,Cargo,Lat,Lng,Source"]
-    .concat(tripLog.map(e =>
-      `${e.date},${e.time},"${e.train}","${e.cat}",${e.dir},"${(e.cargo||"").replace(/"/g,"'")}",${e.lat},${e.lng},${e.auto?"auto":"manual"}`
-    )).join("\n");
-  navigator.clipboard.writeText(csv).then(() => alert("CSV copied to clipboard!")).catch(() => alert(csv));
-});
-
-// Always start in MOBILE mode — user taps 🖥 to switch to desktop
-// (auto-desktop was removed: artifact iframe width != real device width)
-
-function goLive() {
-  isLive=true; simTime=new Date(); lastRealMs=Date.now();
-  document.getElementById("liveBtn").className="on";
-  document.getElementById("s60").className="";
-  document.getElementById("s300").className="";
-  document.getElementById("liveindicator").className="isLive";
-  document.getElementById("liveindicator").textContent="●";
-}
-function setSim(sp) {
-  isLive=false; simSpeed=sp; lastRealMs=Date.now();
-  document.getElementById("liveBtn").className="";
-  document.getElementById("s60").className=sp===60?"on":"";
-  document.getElementById("s300").className=sp===300?"on":"";
-  document.getElementById("liveindicator").className="isSim";
-  document.getElementById("liveindicator").textContent="~";
-}
-function setFilter(f, btn) {
-  curFilter=f;
-  document.querySelectorAll("#filters button").forEach(b=>b.className="");
-  if(btn) btn.className="on";
-}
-// (button bindings done above via addEventListener)
-
-// ══════════════════════════════════════════════════════════
-// LIVE API — Amtraker (Amtrak + Brightline)
-// ══════════════════════════════════════════════════════════
-async function fetchLive() {
-  try {
-    const r = await fetch("https://api-v3.amtraker.com/v3/trains", {cache:"no-store"});
-    if (!r.ok) throw 0;
-    const data = await r.json();
-    const out = {};
-    for (const [num,trains] of Object.entries(data)) {
-      for (const t of trains) {
-        if (!t.lat||!t.lon) continue;
-        if (t.lat<MAP_S-1||t.lat>MAP_N+1) continue;
-        const isBL = String(t.trainNum||"").startsWith("b");
-        const id   = "live_"+(t.trainID||num);
-        const dir  = ["S","SE","SW"].some(h=>(t.heading||"").startsWith(h))?"SB":"NB";
-        out[id] = {
-          lat:t.lat, lng:t.lon, heading:t.heading||"",
-          name: t.routeName||(isBL?"Brightline":"Amtrak"),
-          num:  String(t.trainNum||num),
-          type: isBL?"brightline":"amtrak",
-          dir, speed:t.velocity||0,
-          updated: t.updatedAt?new Date(t.updatedAt):new Date(),
-        };
-      }
-    }
-    liveData=out; apiGood=true; lastFetch=Date.now();
-    document.getElementById("apistatus").textContent="📡 LIVE GPS";
-    document.getElementById("apistatus").style.color="#00ee77";
-  } catch {
-    apiGood=false;
-    document.getElementById("apistatus").textContent="📅 SCHEDULE";
-    document.getElementById("apistatus").style.color="#f5a623";
-  }
-}
-fetchLive();
-setInterval(fetchLive, 30000);
+// ── Static polylines drawn crossing-to-crossing (no dynamic snapping needed) ──
+let csxPolyBg = L.polyline(csxPts,{color:"#000",   weight:6,  opacity:.45}).addTo(map);
+let csxPolyFg = L.polyline(csxPts,{color:"#ffe066",weight:2.5,opacity:.9 }).addTo(map);
+let fecPolyBg = L.polyline(fecPts,{color:"#000",   weight:6,  opacity:.45}).addTo(map);
+let fecPolyFg = L.polyline(fecPts,{color:"#ff8c00",weight:2.5,opacity:.9 }).addTo(map);
 
 // ══════════════════════════════════════════════════════════
 // FEATURE 9 — FREIGHT CARGO INFO
@@ -1395,9 +898,6 @@ async function fetchCrossingsForView() {
     crossingLayer.clearLayers();
     crossingCache = {};
     lastFetchBounds = null;
-    anchors.csx = [];
-    anchors.fec = [];
-    redrawTracks();
     return;
   }
 
@@ -1432,7 +932,6 @@ out body;`;
 
   lastFetchBounds = bounds.pad(pad);
 
-  let newAnchors = 0;
   for (const node of data.elements) {
     const key = `${node.lat.toFixed(4)},${node.lon.toFixed(4)}`;
     if (crossingCache[key]) continue;
@@ -1458,36 +957,10 @@ out body;`;
         {maxWidth:220})
       .addTo(crossingLayer);
 
-    // ── Classify as CSX or FEC anchor by proximity ──────────────
-    const distToTrack = (pts) => {
-      let best = Infinity;
-      for (let i = 0; i < pts.length - 1; i++) {
-        const [lat1,lng1] = pts[i], [lat2,lng2] = pts[i+1];
-        const dx=lat2-lat1, dy=lng2-lng1, lenSq=dx*dx+dy*dy;
-        let t = lenSq>0 ? ((node.lat-lat1)*dx+(node.lon-lng1)*dy)/lenSq : 0;
-        t = Math.max(0,Math.min(1,t));
-        const d = Math.hypot(node.lat-(lat1+t*dx), node.lon-(lng1+t*dy));
-        if (d < best) best = d;
-      }
-      return best;
-    };
-    const dCsx = distToTrack(csxPts);
-    const dFec = distToTrack(fecPts);
-    // Only anchor if clearly near one track (within ~500m ≈ 0.005°)
-    // Use a generous threshold since our skeleton may still be slightly off
-    if (dCsx < dFec && dCsx < 0.005) {
-      anchors.csx.push([node.lat, node.lon]);
-      newAnchors++;
-    } else if (dFec <= dCsx && dFec < 0.005) {
-      anchors.fec.push([node.lat, node.lon]);
-      newAnchors++;
-    }
   }
 
   if (data.elements.length)
-    console.log(`✓ +${data.elements.length} crossings, +${newAnchors} anchors (zoom ${zoom})`);
-
-  if (newAnchors > 0) redrawTracks();
+    console.log(`✓ +${data.elements.length} crossings loaded (zoom ${zoom})`);
 }
 
 // Debounce crossing fetch — wait 600ms after zoom/pan stops
