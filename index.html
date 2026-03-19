@@ -366,7 +366,8 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
 
     <!-- MAP -->
     <div id="mapwrap">
-      <div id="map" style="min-height:200px"></div>
+      <!-- Height set inline so Leaflet never measures zero on init -->
+      <div id="map" style="width:100%;height:100%;min-height:220px"></div>
       <div id="mapcorner">
         <b id="otcount">0</b> TRAINS IN 50MI CORRIDOR<br>
         🟡 CSX/TRI-RAIL &nbsp;🟠 FEC/BRIGHTLINE
@@ -588,6 +589,30 @@ const LOGOS = {
   </svg>`)}`,
 };
 
+// ── Pre-size the map container BEFORE Leaflet measures it ──
+// This is critical — if mapwrap has 0 height when L.map() runs,
+// Leaflet renders everything in the top-left corner permanently.
+(function presizeMap() {
+  const ua = navigator.userAgent || "";
+  const isMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(ua);
+  const wrap = document.getElementById("mapwrap");
+  const hdr  = document.getElementById("hdr");
+  const hdrH = hdr ? hdr.offsetHeight : 52;
+  const winH = window.innerHeight;
+  const winW = window.innerWidth;
+  if (isMobile) {
+    // Mobile: map is 220px fixed
+    wrap.style.width  = "100%";
+    wrap.style.height = "220px";
+  } else {
+    // Desktop: map is 65% wide, full remaining height
+    wrap.style.width  = Math.floor(winW * 0.65) + "px";
+    wrap.style.height = (winH - hdrH) + "px";
+    // Also set body to row immediately so it's correct when L.map runs
+    document.getElementById("body").style.flexDirection = "row";
+  }
+})();
+
 const map = L.map("map", {
   center: [27.8, -80.8],  // Center of Florida between both corridors
   zoom: 7,                // Zoom 7 shows all of Florida
@@ -667,37 +692,38 @@ const csxPts = [
   [26.788,-80.272],[26.760,-80.250],
   [26.740,-80.210],[26.730,-80.168],
   // Mangonia Park — start of South FL Rail Corridor
+  // Track runs along old Seaboard corridor, roughly parallel to and WEST of I-95
   [26.742,-80.112],
-  // West Palm Beach
-  [26.715,-80.112],[26.693,-80.113],
+  // West Palm Beach (track runs ~1km west of I-95)
+  [26.715,-80.115],[26.693,-80.118],
   // Lake Worth Beach
-  [26.648,-80.121],[26.620,-80.122],
+  [26.648,-80.124],[26.620,-80.126],
   // Boynton Beach
-  [26.580,-80.122],[26.555,-80.122],
+  [26.580,-80.128],[26.555,-80.129],
   // Delray Beach
-  [26.499,-80.122],[26.478,-80.122],
-  // Boca Raton
-  [26.420,-80.122],[26.396,-80.122],[26.376,-80.122],
-  // Deerfield Beach ★
-  [26.347,-80.122],[26.317,-80.122],
+  [26.499,-80.130],[26.478,-80.131],
+  // Boca Raton (Military Trail corridor)
+  [26.420,-80.133],[26.396,-80.133],[26.376,-80.133],
+  // Deerfield Beach ★ — real track is west of I-95, ~80.134
+  [26.347,-80.133],[26.317,-80.134],
   // Pompano Beach
-  [26.272,-80.122],[26.252,-80.123],
+  [26.272,-80.135],[26.252,-80.136],
   // Cypress Creek / Oakland Park
-  [26.239,-80.124],[26.215,-80.126],
-  // Fort Lauderdale
-  [26.182,-80.127],[26.165,-80.128],
-  // Dania Beach
-  [26.145,-80.129],[26.118,-80.129],
-  // Hollywood
-  [26.102,-80.129],
-  // Opa-locka / NW Miami — begins curving west-southwest
-  [26.078,-80.130],[26.055,-80.132],
-  [26.030,-80.137],[26.010,-80.145],
-  [25.993,-80.158],[25.978,-80.175],
-  [25.965,-80.196],[25.953,-80.218],
-  [25.942,-80.240],[25.931,-80.260],
+  [26.239,-80.137],[26.215,-80.138],
+  // Fort Lauderdale (tracks run behind Broward Mall / Andrews Ave area)
+  [26.182,-80.140],[26.165,-80.141],
+  // Dania Beach / Hollywood
+  [26.145,-80.143],[26.118,-80.145],
+  // Hollywood station area
+  [26.102,-80.147],
+  // Opa-locka / Golden Glades — begins curving west-southwest toward MIA
+  [26.078,-80.150],[26.055,-80.155],
+  [26.030,-80.163],[26.010,-80.172],
+  [25.993,-80.184],[25.978,-80.198],
+  [25.965,-80.215],[25.953,-80.232],
+  [25.942,-80.250],[25.931,-80.268],
   // Hialeah area — swinging around north of MIA
-  [25.921,-80.276],[25.912,-80.291],
+  [25.921,-80.284],[25.912,-80.299],
   // Miami Airport Station (MIA Intermodal Center)
   [25.795,-80.294],
 ];
@@ -1082,7 +1108,13 @@ function toggleMode() {
 }
 
 // ── Force map to fill container — defined early so all callers can use it ──
-function fixMapSize() { map.invalidateSize({animate:false}); }
+function fixMapSize() {
+  // Clear any inline size overrides so CSS media queries take full control
+  const wrap = document.getElementById("mapwrap");
+  if (wrap) { wrap.style.width = ""; wrap.style.height = ""; }
+  document.getElementById("body").style.flexDirection = "";
+  map.invalidateSize({animate:false});
+}
 
 // ── Auto-detect device type — runs after map is sized ─────
 // Delay ensures CSS has applied and map container is measured correctly
@@ -1452,11 +1484,12 @@ out body;`;
     };
     const dCsx = distToTrack(csxPts);
     const dFec = distToTrack(fecPts);
-    // Only anchor if clearly near one track (within ~200m ≈ 0.002°)
-    if (dCsx < dFec && dCsx < 0.002) {
+    // Only anchor if clearly near one track (within ~500m ≈ 0.005°)
+    // Use a generous threshold since our skeleton may still be slightly off
+    if (dCsx < dFec && dCsx < 0.005) {
       anchors.csx.push([node.lat, node.lon]);
       newAnchors++;
-    } else if (dFec <= dCsx && dFec < 0.002) {
+    } else if (dFec <= dCsx && dFec < 0.005) {
       anchors.fec.push([node.lat, node.lon]);
       newAnchors++;
     }
@@ -1468,8 +1501,85 @@ out body;`;
   if (newAnchors > 0) redrawTracks();
 }
 
-// Debounce — wait 600ms after zoom/pan stops before fetching
-function scheduleCrossingFetch() {
+// ── High-zoom OSM track geometry ──────────────────────────
+// At zoom ≥ 14, fetch the actual railway ways from OSM and draw them
+// directly, completely replacing the skeleton approximation
+const osmTrackLayer = L.layerGroup().addTo(map);
+let osmTrackCache = {};  // bbox key → already fetched
+let osmTrackFetchTimer = null;
+
+async function fetchOSMTracks() {
+  if (location.hostname.includes("claudeusercontent")) return;
+  const zoom = map.getZoom();
+  if (zoom < 14) {
+    osmTrackLayer.clearLayers();
+    osmTrackCache = {};
+    // Show skeleton lines again
+    csxPolyBg.setStyle({opacity:.45}); csxPolyFg.setStyle({opacity:.9});
+    fecPolyBg.setStyle({opacity:.45}); fecPolyFg.setStyle({opacity:.9});
+    return;
+  }
+
+  const bounds = map.getBounds();
+  const bboxKey = `${bounds.getSouth().toFixed(2)},${bounds.getWest().toFixed(2)}`;
+  if (osmTrackCache[bboxKey]) return;
+
+  const pad = 0.02;
+  const s = bounds.getSouth()-pad, n = bounds.getNorth()+pad;
+  const w = bounds.getWest()-pad,  e = bounds.getEast()+pad;
+
+  const query = `[out:json][timeout:15];
+way["railway"="rail"](${s.toFixed(4)},${w.toFixed(4)},${n.toFixed(4)},${e.toFixed(4)});
+(._;>;);out body;`;
+
+  const mirrors = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+  ];
+
+  let data = null;
+  for (const url of mirrors) {
+    try {
+      const r = await fetch(url,{method:"POST",body:"data="+encodeURIComponent(query)});
+      if (!r.ok) continue;
+      data = await r.json();
+      break;
+    } catch(e) {}
+  }
+  if (!data) return;
+  osmTrackCache[bboxKey] = true;
+
+  // Build node map
+  const nodeMap = {};
+  data.elements.filter(e=>e.type==="node").forEach(n=>{nodeMap[n.id]=[n.lat,n.lon];});
+
+  // Draw each railway way
+  data.elements.filter(e=>e.type==="way").forEach(way=>{
+    const coords = way.nodes.map(id=>nodeMap[id]).filter(Boolean);
+    if (coords.length < 2) return;
+    const tags = way.tags||{};
+    const name = tags.name||tags.operator||"";
+    // Colour by operator
+    const isFEC = /FEC|Brightline|Florida East Coast/i.test(name+JSON.stringify(tags));
+    const isCSX = /CSX|SFRTA|Tri-Rail|South Florida Rail/i.test(name+JSON.stringify(tags));
+    const col = isFEC ? "#ff8c00" : isCSX ? "#ffe066" : "#aaa";
+    // Black shadow + coloured line
+    L.polyline(coords,{color:"#000",weight:6,opacity:.5,interactive:false}).addTo(osmTrackLayer);
+    L.polyline(coords,{color:col,weight:2.5,opacity:.95,interactive:false}).addTo(osmTrackLayer);
+  });
+
+  // Hide skeleton lines when OSM tracks are showing — they overlap confusingly
+  csxPolyBg.setStyle({opacity:0}); csxPolyFg.setStyle({opacity:0});
+  fecPolyBg.setStyle({opacity:0}); fecPolyFg.setStyle({opacity:0});
+
+  console.log(`✓ OSM tracks drawn for zoom ${zoom}`);
+}
+
+function scheduleOSMTrackFetch() {
+  clearTimeout(osmTrackFetchTimer);
+  osmTrackFetchTimer = setTimeout(fetchOSMTracks, 800);
+}
+map.on("zoomend moveend", scheduleOSMTrackFetch);
   clearTimeout(crossingFetchTimer);
   crossingFetchTimer = setTimeout(fetchCrossingsForView, 600);
 }
