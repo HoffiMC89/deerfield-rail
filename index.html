@@ -715,33 +715,31 @@ const FALLBACK_FEC = [
 let liveCsxPts = FALLBACK_CSX.slice();
 let liveFecPts = FALLBACK_FEC.slice();
 
-// Colored polylines on map
-const sfrcLine = L.polyline(liveCsxPts, {
-  color:"#3b82f6", weight:5, opacity:0.9, interactive:false
-}).addTo(map);
+// Draw track lines — black shadow + colored mainline, crossing-point to crossing-point
+// SFRC = blue  |  FEC = orange
+const sfrcShadow = L.polyline(liveCsxPts, {color:"#000", weight:9,  opacity:0.5, interactive:false}).addTo(map);
+const sfrcLine   = L.polyline(liveCsxPts, {color:"#3b82f6", weight:5, opacity:1.0, interactive:false}).addTo(map);
+const fecShadow  = L.polyline(liveFecPts, {color:"#000", weight:9,  opacity:0.5, interactive:false}).addTo(map);
+const fecLine    = L.polyline(liveFecPts, {color:"#f97316", weight:5, opacity:1.0, interactive:false}).addTo(map);
 
-const fecLine = L.polyline(liveFecPts, {
-  color:"#f97316", weight:5, opacity:0.9, interactive:false
-}).addTo(map);
-
-// ORM tile overlay underneath
+// ORM tile overlay — optional, shown on top for detail reference
 const ormLayer = L.tileLayer(
   "https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
   {attribution:'© <a href="https://openrailwaymap.org">OpenRailwayMap</a>',
-   maxZoom:19, subdomains:"abc", opacity:0.5, minZoom:8}
+   maxZoom:19, subdomains:"abc", opacity:0.45, minZoom:10}
 );
-ormLayer.addTo(map);
+// ORM off by default — our colored lines are the primary display
+let ormEnabled = false;
 
-let ormEnabled = true;
 function toggleOrmLayer() {
   ormEnabled = !ormEnabled;
   const btn = document.getElementById("btnTrack");
   if (ormEnabled) {
-    ormLayer.addTo(map); sfrcLine.addTo(map); fecLine.addTo(map);
-    if (btn) { btn.style.borderColor="#00d4ff"; btn.style.color="#00d4ff"; btn.textContent="🛤 TRACK"; }
+    ormLayer.addTo(map);
+    if (btn) { btn.style.borderColor="#00d4ff"; btn.style.color="#00d4ff"; btn.classList.add("on"); }
   } else {
-    map.removeLayer(ormLayer); map.removeLayer(sfrcLine); map.removeLayer(fecLine);
-    if (btn) { btn.style.borderColor="#334"; btn.style.color="#888"; btn.textContent="🛤 OFF"; }
+    if (map.hasLayer(ormLayer)) map.removeLayer(ormLayer);
+    if (btn) { btn.style.borderColor="#334"; btn.style.color="#aaa"; btn.classList.remove("on"); }
   }
 }
 
@@ -749,21 +747,28 @@ function setTrackStatus(msg, col) {
   const el = document.getElementById("trackstatus");
   if (el) { el.textContent = msg; el.style.color = col || "#f5a623"; }
 }
+setTrackStatus("🛤 CROSSING-POINT TRACK", "#3b82f6");
 
-// Apply new track data — updates lines AND engine atomically
-// Only replaces if new data is genuinely better (more points)
+// Apply new track data — redraws ALL lines AND rebuilds engine atomically
+// Only upgrades if new data has meaningfully more points
 function applyTrackData(csx, fec) {
-  if (csx && csx.length > liveCsxPts.length) {
+  const csxBetter = csx && csx.length > liveCsxPts.length + 5;
+  const fecBetter = fec && fec.length > liveFecPts.length + 5;
+  if (csxBetter) {
     liveCsxPts = csx;
+    sfrcShadow.setLatLngs(liveCsxPts);
     sfrcLine.setLatLngs(liveCsxPts);
   }
-  if (fec && fec.length > liveFecPts.length) {
+  if (fecBetter) {
     liveFecPts = fec;
+    fecShadow.setLatLngs(liveFecPts);
     fecLine.setLatLngs(liveFecPts);
   }
-  rebuildTrackEngine();
+  if (csxBetter || fecBetter) {
+    rebuildTrackEngine();
+    setTrackStatus("🛤 REAL OSM TRACK", "#00ee77");
+  }
 }
-
 // Safety net: rebuild engine 1s after page load in case anything was deferred
 setTimeout(() => { rebuildTrackEngine(); }, 1000);
 
