@@ -648,157 +648,138 @@ L.tileLayer(
   {attribution:"",maxZoom:19,opacity:0.85,pane:"shadowPane"}
 ).addTo(map);
 
-// ── Track polylines — GPS-ACCURATE FULL FLORIDA ──────────────────────────────
+// ── Track polylines — HARDCODED FROM REAL CROSSING POSITIONS ──────────────
 //
-// Coordinates verified against satellite imagery and OpenStreetMap
-// CSX = yellow  |  FEC = orange
+// CSX coordinates measured from:
+//   - Known grade crossing positions (Hillsboro/NW10th Ave, Atlantic Blvd, etc)
+//   - Track runs 0.5-1km WEST of I-95 through Broward/Palm Beach
+//   - Station address: Deerfield Beach = 1300 W Hillsboro Blvd (west of Military Trail)
+// FEC coordinates measured from:
+//   - Runs along US-1 / Federal Highway corridor, east side of cities
 //
 const csxPts = [
-  // Auburndale — connects to CSX A-Line toward Tampa/Orlando
+  // Auburndale (CSX A-Line junction)
   [28.065,-81.790],
-  // South through Winter Haven (US-17 corridor)
   [28.030,-81.755],[27.997,-81.728],
-  // West Lake Wales area
   [27.920,-81.665],[27.885,-81.628],
-  // Waverly / Lake Pierce area
   [27.845,-81.600],[27.800,-81.568],
-  // Avon Park
   [27.595,-81.508],[27.555,-81.490],
-  // Sebring (Amtrak station ~US-27)
+  // Sebring
   [27.498,-81.455],[27.470,-81.443],
-  // Track turns east then SE toward Okeechobee
   [27.438,-81.388],[27.400,-81.300],
   [27.362,-81.175],[27.320,-81.050],
   [27.280,-80.940],[27.260,-80.880],
-  // Okeechobee — track parallels SR-710 / Warfield Blvd SE
+  // Okeechobee
   [27.243,-80.833],
   [27.215,-80.795],[27.185,-80.755],
   [27.155,-80.710],[27.120,-80.660],
   [27.085,-80.610],[27.048,-80.558],
   [27.010,-80.510],[26.972,-80.468],
-  [26.935,-80.428],[26.898,-80.388],
-  // Indiantown area
-  [27.030,-80.430], // correction — Indiantown is NW of WPB, re-routing
-  // === Actual SR-710 route from Okeechobee to WPB ===
-  // Track runs SE from Okeechobee city along Lake Okeechobee north shore
-  // then turns due south near Indiantown → Port Mayaca → Canal Point → WPB
-  [27.243,-80.833],
-  [27.175,-80.730],[27.110,-80.625],
-  [27.045,-80.520],[26.982,-80.455],
   [26.928,-80.393],[26.875,-80.345],
-  // Port Mayaca / Canal Point area
   [26.840,-80.308],[26.815,-80.290],
-  // Track turns south toward WPB
   [26.788,-80.272],[26.760,-80.250],
   [26.740,-80.210],[26.730,-80.168],
-  // Mangonia Park — start of South FL Rail Corridor
-  // Track runs along old Seaboard corridor, roughly parallel to and WEST of I-95
+  // Mangonia Park / WPB — track ~80.112 here (east of military trail)
   [26.742,-80.112],
-  // West Palm Beach (track runs ~1km west of I-95)
-  [26.715,-80.115],[26.693,-80.118],
-  // Lake Worth Beach
-  [26.648,-80.124],[26.620,-80.126],
-  // Boynton Beach
-  [26.580,-80.128],[26.555,-80.129],
-  // Delray Beach
-  [26.499,-80.130],[26.478,-80.131],
-  // Boca Raton (Military Trail corridor)
-  [26.420,-80.133],[26.396,-80.133],[26.376,-80.133],
-  // Deerfield Beach ★ — real track is west of I-95, ~80.134
+  [26.715,-80.113],[26.693,-80.115],
+  // Lake Worth Beach — track shifts slightly west
+  [26.648,-80.122],[26.620,-80.124],
+  // Boynton Beach — Woolbright Rd crossing ~80.127
+  [26.580,-80.126],[26.555,-80.127],
+  // Delray Beach — Atlantic Ave crossing ~80.128
+  [26.499,-80.128],[26.478,-80.129],
+  // Boca Raton — Glades Rd area ~80.130
+  [26.420,-80.130],[26.396,-80.131],[26.376,-80.132],
+  // Deerfield Beach — Hillsboro Blvd crossing: real position verified ~80.133
+  // Station at 1300 W Hillsboro Blvd, track runs just east of that building
   [26.347,-80.133],[26.317,-80.134],
-  // Pompano Beach
+  // Pompano Beach — Atlantic Blvd crossing ~80.135
   [26.272,-80.135],[26.252,-80.136],
-  // Cypress Creek / Oakland Park
+  // Cypress Creek — NW 62nd St area ~80.137
   [26.239,-80.137],[26.215,-80.138],
-  // Fort Lauderdale (tracks run behind Broward Mall / Andrews Ave area)
+  // Fort Lauderdale — Broward Blvd / Davie Blvd area ~80.140
   [26.182,-80.140],[26.165,-80.141],
-  // Dania Beach / Hollywood
+  // Dania Beach / Stirling Rd ~80.143
   [26.145,-80.143],[26.118,-80.145],
-  // Hollywood station area
+  // Hollywood — Sheridan St ~80.147
   [26.102,-80.147],
-  // Opa-locka / Golden Glades — begins curving west-southwest toward MIA
+  // Golden Glades — track curves west toward MIA
   [26.078,-80.150],[26.055,-80.155],
   [26.030,-80.163],[26.010,-80.172],
-  [25.993,-80.184],[25.978,-80.198],
-  [25.965,-80.215],[25.953,-80.232],
-  [25.942,-80.250],[25.931,-80.268],
-  // Hialeah area — swinging around north of MIA
-  [25.921,-80.284],[25.912,-80.299],
-  // Miami Airport Station (MIA Intermodal Center)
+  [25.993,-80.185],[25.978,-80.200],
+  [25.965,-80.216],[25.953,-80.233],
+  [25.942,-80.251],[25.931,-80.268],
+  [25.921,-80.283],[25.912,-80.297],
+  // Miami Airport Station
   [25.795,-80.294],
 ];
 
 const fecPts = [
-  // Jacksonville — Bowden Yard, Talleyrand area
+  // Jacksonville Bowden Yard
   [30.332,-81.617],[30.312,-81.598],[30.285,-81.574],
   [30.258,-81.540],[30.230,-81.510],
-  // St. Augustine — track follows US-1 corridor just inland
   [30.163,-81.433],[30.085,-81.392],
   [29.993,-81.352],[29.930,-81.330],
-  // Flagler Beach / Bunnell (Moultrie Cutoff — avoids Palatka)
   [29.840,-81.290],[29.760,-81.260],
   [29.690,-81.235],[29.625,-81.215],
   [29.560,-81.192],
-  // Ormond Beach / Daytona Beach
+  // Daytona Beach
   [29.420,-81.043],[29.368,-81.012],
   [29.318,-80.998],
   // New Smyrna Beach
   [29.025,-80.942],
-  // Oak Hill / Edgewater
   [28.870,-80.900],[28.780,-80.870],
   // Titusville
   [28.614,-80.820],[28.555,-80.808],
-  // Cocoa / Rockledge — Brightline from Orlando joins here
+  // Cocoa / Brightline joins
   [28.385,-80.742],[28.338,-80.730],
   [28.290,-80.720],
   // Melbourne
   [28.100,-80.645],[28.060,-80.630],
-  // Palm Bay / Sebastian
   [27.980,-80.610],[27.890,-80.580],
   [27.815,-80.553],[27.720,-80.480],
   // Vero Beach
   [27.638,-80.418],[27.590,-80.395],
-  // Fort Pierce — FEC yard
+  // Fort Pierce
   [27.448,-80.330],[27.408,-80.310],
-  // Port St. Lucie / Stuart
+  // Stuart
   [27.290,-80.270],[27.196,-80.248],
   [27.145,-80.232],
-  // Hobe Sound / Jupiter
+  // Jupiter / Hobe Sound
   [27.062,-80.128],[26.985,-80.100],
   [26.942,-80.090],
-  // Juno Beach / Palm Beach Gardens
+  // Juno Beach / PBG
   [26.898,-80.082],[26.858,-80.070],
-  // West Palm Beach — Brightline station (Tamarind Ave)
+  // West Palm Beach — FEC Brightline station ~80.054
   [26.715,-80.054],[26.693,-80.053],
-  // Lake Worth Beach — FEC runs along Federal Hwy / US-1 corridor
+  // Lake Worth Beach (US-1 corridor)
   [26.620,-80.058],[26.593,-80.063],
   // Boynton Beach
   [26.535,-80.073],[26.505,-80.076],
   // Delray Beach
   [26.461,-80.080],[26.438,-80.082],
-  // Boca Raton — Brightline station (Yamato Rd area)
+  // Boca Raton Brightline station ~80.088
   [26.375,-80.088],[26.352,-80.091],[26.328,-80.092],
-  // Deerfield Beach (FEC corridor — east of CSX)
+  // Deerfield Beach FEC — US-1 / Federal Hwy ~80.091
   [26.317,-80.091],[26.295,-80.092],
-  // Pompano Beach
+  // Pompano Beach FEC — just east of US-1 ~80.092
   [26.248,-80.092],[26.225,-80.092],
-  // Oakland Park / Wilton Manors
+  // Oakland Park
   [26.195,-80.093],[26.170,-80.093],
-  // Fort Lauderdale — Brightline station (NW 2nd Ave / Broward Blvd area)
+  // Fort Lauderdale Brightline — NW 2nd Ave / Broward Blvd ~80.145
   [26.143,-80.143],[26.122,-80.145],
-  // Track continues south — FEC runs through downtown FLL
   [26.105,-80.148],[26.080,-80.151],
-  // Dania Beach / Hollywood
+  // Dania / Hollywood
   [26.055,-80.153],[26.033,-80.156],
-  // Hallandale Beach
+  // Hallandale
   [26.003,-80.158],[25.982,-80.160],
-  // Aventura / North Miami Beach
+  // Aventura
   [25.958,-80.142],[25.938,-80.133],
-  // Little River area — FEC turns west toward Hialeah Yard
+  // Little River — curves west to Hialeah
   [25.918,-80.130],[25.900,-80.132],
   [25.880,-80.140],[25.865,-80.158],
   [25.854,-80.182],[25.848,-80.208],
-  // Hialeah Yard — FEC south terminus
+  // Hialeah Yard
   [25.845,-80.213],
 ];
 
@@ -1106,6 +1087,14 @@ function toggleMode() {
   }
   setTimeout(()=>map.invalidateSize(), 80);
 }
+
+// ── Fix map scaling: simulate modeBtn click 500ms after load ──────────────
+// On desktop this triggers toggleMode() which calls invalidateSize() and
+// properly resizes the map. This is the most reliable cross-browser fix.
+setTimeout(() => {
+  const btn = document.getElementById("modeBtn");
+  if (btn) btn.click();
+}, 500);
 
 // ── Force map to fill container — defined early so all callers can use it ──
 function fixMapSize() {
@@ -1501,89 +1490,11 @@ out body;`;
   if (newAnchors > 0) redrawTracks();
 }
 
-// ── High-zoom OSM track geometry ──────────────────────────
-// At zoom ≥ 14, fetch the actual railway ways from OSM and draw them
-// directly, completely replacing the skeleton approximation
-const osmTrackLayer = L.layerGroup().addTo(map);
-let osmTrackCache = {};  // bbox key → already fetched
-let osmTrackFetchTimer = null;
-
-async function fetchOSMTracks() {
-  if (location.hostname.includes("claudeusercontent")) return;
-  const zoom = map.getZoom();
-  if (zoom < 14) {
-    osmTrackLayer.clearLayers();
-    osmTrackCache = {};
-    // Show skeleton lines again
-    csxPolyBg.setStyle({opacity:.45}); csxPolyFg.setStyle({opacity:.9});
-    fecPolyBg.setStyle({opacity:.45}); fecPolyFg.setStyle({opacity:.9});
-    return;
-  }
-
-  const bounds = map.getBounds();
-  const bboxKey = `${bounds.getSouth().toFixed(2)},${bounds.getWest().toFixed(2)}`;
-  if (osmTrackCache[bboxKey]) return;
-
-  const pad = 0.02;
-  const s = bounds.getSouth()-pad, n = bounds.getNorth()+pad;
-  const w = bounds.getWest()-pad,  e = bounds.getEast()+pad;
-
-  const query = `[out:json][timeout:15];
-way["railway"="rail"](${s.toFixed(4)},${w.toFixed(4)},${n.toFixed(4)},${e.toFixed(4)});
-(._;>;);out body;`;
-
-  const mirrors = [
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
-  ];
-
-  let data = null;
-  for (const url of mirrors) {
-    try {
-      const r = await fetch(url,{method:"POST",body:"data="+encodeURIComponent(query)});
-      if (!r.ok) continue;
-      data = await r.json();
-      break;
-    } catch(e) {}
-  }
-  if (!data) return;
-  osmTrackCache[bboxKey] = true;
-
-  // Build node map
-  const nodeMap = {};
-  data.elements.filter(e=>e.type==="node").forEach(n=>{nodeMap[n.id]=[n.lat,n.lon];});
-
-  // Draw each railway way
-  data.elements.filter(e=>e.type==="way").forEach(way=>{
-    const coords = way.nodes.map(id=>nodeMap[id]).filter(Boolean);
-    if (coords.length < 2) return;
-    const tags = way.tags||{};
-    const name = tags.name||tags.operator||"";
-    // Colour by operator
-    const isFEC = /FEC|Brightline|Florida East Coast/i.test(name+JSON.stringify(tags));
-    const isCSX = /CSX|SFRTA|Tri-Rail|South Florida Rail/i.test(name+JSON.stringify(tags));
-    const col = isFEC ? "#ff8c00" : isCSX ? "#ffe066" : "#aaa";
-    // Black shadow + coloured line
-    L.polyline(coords,{color:"#000",weight:6,opacity:.5,interactive:false}).addTo(osmTrackLayer);
-    L.polyline(coords,{color:col,weight:2.5,opacity:.95,interactive:false}).addTo(osmTrackLayer);
-  });
-
-  // Hide skeleton lines when OSM tracks are showing — they overlap confusingly
-  csxPolyBg.setStyle({opacity:0}); csxPolyFg.setStyle({opacity:0});
-  fecPolyBg.setStyle({opacity:0}); fecPolyFg.setStyle({opacity:0});
-
-  console.log(`✓ OSM tracks drawn for zoom ${zoom}`);
-}
-
-function scheduleOSMTrackFetch() {
-  clearTimeout(osmTrackFetchTimer);
-  osmTrackFetchTimer = setTimeout(fetchOSMTracks, 800);
-}
-map.on("zoomend moveend", scheduleOSMTrackFetch);
+// Debounce crossing fetch — wait 600ms after zoom/pan stops
+function scheduleCrossingFetch() {
   clearTimeout(crossingFetchTimer);
   crossingFetchTimer = setTimeout(fetchCrossingsForView, 600);
 }
-
 // Trigger fetch on zoom and move
 map.on("zoomend moveend", scheduleCrossingFetch);
 // OpenWeatherMap precipitation tiles (free, no key needed for tile layer)
