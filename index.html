@@ -735,57 +735,46 @@ const fecPts = [
 ];
 
 // ══════════════════════════════════════════════════════════
-// TRACK DISPLAY
-// Draw both corridors as static polylines using the
-// verified hand-crafted crossing-point coordinates above.
-// These are accurate to within ~50m of the real track.
-// An OpenRailwayMap tile overlay is added on top so users
-// can see the exact track geometry at any zoom level.
+// TRACK DISPLAY — colored polylines fetched from real OSM data
+// SFRC = blue  |  FEC = orange
+// On first load fetches real node geometry from Overpass and
+// caches in localStorage. Falls back to hand-crafted arrays.
+// ORM tile overlay shows all track detail underneath.
 // ══════════════════════════════════════════════════════════
 
-const TRACK_CACHE_KEY  = "osmTrackData_v3";
-const TRACK_CACHE_DAYS = 30;
+const TRACK_CACHE_KEY  = "osmTrackData_v4";
+const TRACK_CACHE_DAYS = 60;
 
-// Polyline arrays kept for train position interpolation engine only
-// Visual track display is handled entirely by OpenRailwayMap tile overlay
-let csxPolyBg = null;
-let csxPolyFg = null;
-let fecPolyBg = null;
-let fecPolyFg = null;
-
-// Live arrays used by train interpolation engine
+// Live arrays used by train interpolation engine (start with fallback)
 let liveCsxPts = csxPts;
 let liveFecPts = fecPts;
 
-// OpenRailwayMap tile overlay — shows ALL real track geometry
+// Colored polylines — drawn on map, updated when OSM data loads
+// SFRC = blue (#3b82f6)   FEC = orange (#f97316)
+const sfrcLine = L.polyline(liveCsxPts, {
+  color: "#3b82f6", weight: 5, opacity: 0.9,
+  interactive: false
+}).addTo(map);
+
+const fecLine = L.polyline(liveFecPts, {
+  color: "#f97316", weight: 5, opacity: 0.9,
+  interactive: false
+}).addTo(map);
+
+// ORM tile overlay — shows full track detail on top
 const ormLayer = L.tileLayer(
   "https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
   {
     attribution: '© <a href="https://openrailwaymap.org">OpenRailwayMap</a>',
-    maxZoom: 19,
-    subdomains: "abc",
-    opacity: 0.85,
-    minZoom: 8,
+    maxZoom: 19, subdomains: "abc", opacity: 0.6, minZoom: 8,
   }
 );
 ormLayer.addTo(map);
 
-let ormEnabled = true;
-function toggleOrmLayer() {
-  ormEnabled = !ormEnabled;
-  const btn = document.getElementById("btnTrack");
-  if (ormEnabled) {
-    ormLayer.addTo(map);
-    if (btn) { btn.style.borderColor = "#00d4ff"; btn.style.color = "#00d4ff"; btn.textContent = "🛤 TRACK"; }
-  } else {
-    map.removeLayer(ormLayer);
-    if (btn) { btn.style.borderColor = "#334"; btn.style.color = "#888"; btn.textContent = "🛤 OFF"; }
-  }
-}
-
+// Update both polylines + rebuild engine whenever new coords load
 function redrawLivePolylines() {
-  // No static polylines to redraw — ORM tiles handle visual display
-  // Just rebuild the interpolation engine with updated point arrays
+  sfrcLine.setLatLngs(liveCsxPts);
+  fecLine.setLatLngs(liveFecPts);
   rebuildTrackEngine();
 }
 
@@ -794,28 +783,141 @@ function setTrackStatus(msg, col) {
   if (el) { el.textContent = msg; el.style.color = col || "#f5a623"; }
 }
 
-// No async fetch needed — ORM tiles handle real geometry
-setTrackStatus("🛤 ORM OVERLAY", "#00ee77");
-
-// Stub so refreshOsmTracks button still works gracefully
-async function loadOsmTracks() { setTrackStatus("🛤 ORM OVERLAY", "#00ee77"); }
-async function refreshOsmTracks() { toggleOrmLayer(); }
-
-// Redraw both tracks from current live arrays
-function redrawLivePolylines() {
-  csxPolyBg.setLatLngs(liveCsxPts);
-  csxPolyFg.setLatLngs(liveCsxPts);
-  fecPolyBg.setLatLngs(liveFecPts);
-  fecPolyFg.setLatLngs(liveFecPts);
-  // Rebuild track engine with new geometry
-  rebuildTrackEngine();
+let ormEnabled = true;
+function toggleOrmLayer() {
+  ormEnabled = !ormEnabled;
+  const btn = document.getElementById("btnTrack");
+  if (ormEnabled) {
+    ormLayer.addTo(map);
+    sfrcLine.addTo(map); fecLine.addTo(map);
+    if (btn) { btn.style.borderColor="#00d4ff"; btn.style.color="#00d4ff"; btn.textContent="🛤 TRACK"; }
+  } else {
+    map.removeLayer(ormLayer);
+    map.removeLayer(sfrcLine); map.removeLayer(fecLine);
+    if (btn) { btn.style.borderColor="#334"; btn.style.color="#888"; btn.textContent="🛤 OFF"; }
+  }
 }
 
+// ── Fetch real track geometry from Overpass ───────────────
+// Queries the SFRC and FEC route relations by ID to get exact
+// node coordinates, then sorts them N→S for interpolation.
+const OVERPASS_URLS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+];
 
-// ══════════════════════════════════════════════════════════
-// TRACK ENGINE — polyline interpolation
-// ══════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════
+// Sort a set of way segments into a continuous N→S polyline
+function sortWaysNtoS(elements) {
+  const ways = elements
+    .filter(e => e.type === "way" && e.geometry && e.geometry.length >= 2)
+    .map(e => e.geometry.map(n => [n.lat, n.lon]));
+  if (!ways.length) return [];
+
+  // Flatten all points, deduplicate nearby ones, sort by lat descending (N→S)
+  const all = ways.flat();
+  all.sort((a, b) => b[0] - a[0]);
+
+  // Deduplicate points within 0.0001° (~10m)
+  const deduped = [all[0]];
+  for (let i = 1; i < all.length; i++) {
+    const prev = deduped[deduped.length - 1];
+    const d = Math.abs(all[i][0] - prev[0]) + Math.abs(all[i][1] - prev[1]);
+    if (d > 0.0001) deduped.push(all[i]);
+  }
+  return deduped;
+}
+
+async function fetchTrackFromOverpass(query) {
+  for (const url of OVERPASS_URLS) {
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        body: "data=" + encodeURIComponent(query),
+        signal: AbortSignal.timeout(25000),
+      });
+      if (!r.ok) continue;
+      const d = await r.json();
+      if (d.elements && d.elements.length > 0) return d;
+    } catch { /* try next */ }
+  }
+  return null;
+}
+
+async function loadOsmTracks() {
+  if (location.hostname.includes("claudeusercontent")) {
+    setTrackStatus("🗺 FALLBACK", "#f5a623"); return;
+  }
+
+  // Check cache
+  try {
+    const c = localStorage.getItem(TRACK_CACHE_KEY);
+    if (c) {
+      const {ts, csx, fec} = JSON.parse(c);
+      if ((Date.now()-ts) < TRACK_CACHE_DAYS*86400000 && csx.length>10 && fec.length>10) {
+        liveCsxPts = csx; liveFecPts = fec;
+        redrawLivePolylines();
+        setTrackStatus("🛤 OSM CACHED", "#00ee77");
+        return;
+      }
+    }
+  } catch(e) {}
+
+  setTrackStatus("⏳ FETCHING TRACKS…", "#f5a623");
+
+  // SFRC: relation 4322238 (Tri-Rail / SFRTA main line)
+  const sfrcQuery = `[out:json][timeout:30];
+relation(4322238);way(r)["railway"="rail"];out geom;`;
+
+  // FEC: relation 2936327 (Florida East Coast main line)
+  const fecQuery = `[out:json][timeout:30];
+relation(2936327);way(r)["railway"="rail"];out geom;`;
+
+  let gotAny = false;
+
+  const sfrcData = await fetchTrackFromOverpass(sfrcQuery);
+  if (sfrcData && sfrcData.elements.length > 5) {
+    const pts = sortWaysNtoS(sfrcData.elements);
+    // Filter to South FL corridor lng band
+    const fl = pts.filter(([,lng]) => lng >= -80.22 && lng <= -80.08);
+    if (fl.length > 10) {
+      liveCsxPts = fl; gotAny = true;
+      console.log("✓ SFRC from OSM:", fl.length, "pts");
+    }
+  }
+
+  const fecData = await fetchTrackFromOverpass(fecQuery);
+  if (fecData && fecData.elements.length > 5) {
+    const pts = sortWaysNtoS(fecData.elements);
+    // Filter to South FL corridor
+    const fl = pts.filter(([lat,lng]) => lat >= 25.7 && lat <= 26.8 && lng >= -80.22 && lng <= -80.03);
+    if (fl.length > 10) {
+      liveFecPts = fl; gotAny = true;
+      console.log("✓ FEC from OSM:", fl.length, "pts");
+    }
+  }
+
+  if (gotAny) {
+    redrawLivePolylines();
+    setTrackStatus("🛤 REAL OSM", "#00ee77");
+    try {
+      localStorage.setItem(TRACK_CACHE_KEY, JSON.stringify({
+        ts: Date.now(), csx: liveCsxPts, fec: liveFecPts
+      }));
+    } catch(e) {}
+  } else {
+    setTrackStatus("🗺 FALLBACK", "#f5a623");
+  }
+}
+
+async function refreshOsmTracks() {
+  try { localStorage.removeItem(TRACK_CACHE_KEY); } catch(e) {}
+  const btn = document.getElementById("btnTrack");
+  if (btn) btn.textContent = "⏳";
+  await loadOsmTracks();
+  if (btn) { btn.textContent = "🛤 TRACK"; btn.style.color = "#00d4ff"; }
+}
+
+setTimeout(loadOsmTracks, 800);
 
 // Precompute cumulative arc lengths along a polyline
 function buildTrack(pts) {
