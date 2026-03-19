@@ -773,52 +773,62 @@ const fecPts = [
 const TRACK_CACHE_KEY  = "osmTrackData_v3";
 const TRACK_CACHE_DAYS = 30;
 
-// Draw the two corridors
-let csxPolyBg = L.polyline(csxPts,{color:"#000",   weight:6,  opacity:.45}).addTo(map);
-let csxPolyFg = L.polyline(csxPts,{color:"#ffe066",weight:2.5,opacity:.9 }).addTo(map);
-let fecPolyBg = L.polyline(fecPts,{color:"#000",   weight:6,  opacity:.45}).addTo(map);
-let fecPolyFg = L.polyline(fecPts,{color:"#ff8c00",weight:2.5,opacity:.9 }).addTo(map);
+// Polyline arrays kept for train position interpolation engine only
+// Visual track display is handled entirely by OpenRailwayMap tile overlay
+let csxPolyBg = null;
+let csxPolyFg = null;
+let fecPolyBg = null;
+let fecPolyFg = null;
 
 // Live arrays used by train interpolation engine
 let liveCsxPts = csxPts;
 let liveFecPts = fecPts;
 
-// OpenRailwayMap tile overlay — shows REAL track geometry
-// from OSM data, rendered as a tile layer (no API calls needed,
-// no stitching, no relation IDs, just tiles like any basemap).
-// Shows at zoom ≥ 10 to avoid cluttering the overview.
+// OpenRailwayMap tile overlay — shows ALL real track geometry
 const ormLayer = L.tileLayer(
   "https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
   {
     attribution: '© <a href="https://openrailwaymap.org">OpenRailwayMap</a>',
     maxZoom: 19,
     subdomains: "abc",
-    opacity: 0.7,
+    opacity: 0.85,
     minZoom: 8,
   }
 );
-// Add ORM overlay by default — it shows real track lines on top of everything
 ormLayer.addTo(map);
 
-// Toggle function for ORM overlay (wired to TRACK button)
+// Thin colored highlight lines so users can identify which corridor is which:
+// Yellow = SFRC (CSX/Tri-Rail)   Orange = FEC/Brightline
+// These are semi-transparent so the ORM detail shows through
+const sfrcHighlight = L.polyline(csxPts, {
+  color: "#ffe066", weight: 4, opacity: 0.55,
+  interactive: false, pane: "shadowPane"
+}).addTo(map);
+const fecHighlight = L.polyline(fecPts, {
+  color: "#ff8c00", weight: 4, opacity: 0.55,
+  interactive: false, pane: "shadowPane"
+}).addTo(map);
+
 let ormEnabled = true;
 function toggleOrmLayer() {
   ormEnabled = !ormEnabled;
   const btn = document.getElementById("btnTrack");
   if (ormEnabled) {
     ormLayer.addTo(map);
+    sfrcHighlight.addTo(map);
+    fecHighlight.addTo(map);
     if (btn) { btn.style.borderColor = "#00d4ff"; btn.style.color = "#00d4ff"; btn.textContent = "🛤 TRACK"; }
   } else {
     map.removeLayer(ormLayer);
+    map.removeLayer(sfrcHighlight);
+    map.removeLayer(fecHighlight);
     if (btn) { btn.style.borderColor = "#334"; btn.style.color = "#888"; btn.textContent = "🛤 OFF"; }
   }
 }
 
 function redrawLivePolylines() {
-  csxPolyBg.setLatLngs(liveCsxPts);
-  csxPolyFg.setLatLngs(liveCsxPts);
-  fecPolyBg.setLatLngs(liveFecPts);
-  fecPolyFg.setLatLngs(liveFecPts);
+  // No static polylines to redraw — ORM tiles handle visual display
+  // Just rebuild the interpolation engine with updated point arrays
   rebuildTrackEngine();
 }
 
