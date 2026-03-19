@@ -383,12 +383,12 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         padding:5px 9px;border-radius:5px;font-size:14px;min-height:32px;
         box-shadow:0 2px 8px rgba(0,0,0,.5)" title="Center on my location">📍</button>
       <div id="layertoggle">
-        <button id="btnSat" class="on">🛰 SAT</button>
+        <button id="btnOrm" class="on">🛤 ORM</button>
+        <button id="btnSat">🛰 SAT</button>
         <button id="btnOsm">🗺 OSM</button>
         <button id="btnDark">🌑 DARK</button>
         <button id="btnWeather">🌧 RAIN</button>
         <button id="btnCrossings" class="on">⚠️ XING</button>
-        <button id="btnTrack" title="Toggle OpenRailwayMap real track overlay" style="border-color:#00d4ff;color:#00d4ff">🛤 TRACK</button>
       </div>
     </div>
 
@@ -587,13 +587,15 @@ const LOGOS = {
 })();
 
 const map = L.map("map", {
-  center: [27.8, -80.8],  // Center of Florida between both corridors
-  zoom: 7,                // Zoom 7 shows all of Florida
+  center: [26.31, -80.13],  // Deerfield Beach area
+  zoom: 11,
   zoomControl: true,
   attributionControl: true,
 });
 
 const LAYERS = {
+  orm:  L.tileLayer("https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
+          {attribution:"© <a href='https://openrailwaymap.org'>OpenRailwayMap</a> © OSM",maxZoom:19,subdomains:"abc"}),
   sat:  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
           {attribution:"© Esri",maxZoom:19}),
   osm:  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -601,25 +603,17 @@ const LAYERS = {
   dark: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
           {attribution:"© OSM © CARTO",maxZoom:19,subdomains:"abcd"}),
 };
-LAYERS.sat.addTo(map);
-// auto-fallback to OSM if satellite tiles error
-let satFallback=false;
-LAYERS.sat.on("tileerror",()=>{if(!satFallback){satFallback=true;setLayer("osm");}});
+// ORM is default — it shows the real railway map
+LAYERS.orm.addTo(map);
 
 function setLayer(name) {
   Object.values(LAYERS).forEach(l=>{if(map.hasLayer(l))map.removeLayer(l);});
   LAYERS[name].addTo(map);
-  document.getElementById("btnSat").className = name==="sat"?"on":"";
-  document.getElementById("btnOsm").className = name==="osm"?"on":"";
+  document.getElementById("btnSat").className  = name==="sat" ?"on":"";
+  document.getElementById("btnOsm").className  = name==="osm" ?"on":"";
   document.getElementById("btnDark").className = name==="dark"?"on":"";
+  document.getElementById("btnOrm").className  = name==="orm" ?"on":"";
 }
-// setLayer called via addEventListener above
-
-// Labels on top of satellite
-L.tileLayer(
-  "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-  {attribution:"",maxZoom:19,opacity:0.85,pane:"shadowPane"}
-).addTo(map);
 
 // ══════════════════════════════════════════════════════════
 // TRACK SYSTEM
@@ -715,58 +709,30 @@ const FALLBACK_FEC = [
 let liveCsxPts = FALLBACK_CSX.slice();
 let liveFecPts = FALLBACK_FEC.slice();
 
-// Draw track lines — black shadow + colored mainline, crossing-point to crossing-point
-// SFRC = blue  |  FEC = orange
-const sfrcShadow = L.polyline(liveCsxPts, {color:"#000", weight:9,  opacity:0.5, interactive:false}).addTo(map);
-const sfrcLine   = L.polyline(liveCsxPts, {color:"#3b82f6", weight:5, opacity:1.0, interactive:false}).addTo(map);
-const fecShadow  = L.polyline(liveFecPts, {color:"#000", weight:9,  opacity:0.5, interactive:false}).addTo(map);
-const fecLine    = L.polyline(liveFecPts, {color:"#f97316", weight:5, opacity:1.0, interactive:false}).addTo(map);
-
-// ORM tile overlay — optional, shown on top for detail reference
-const ormLayer = L.tileLayer(
-  "https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
-  {attribution:'© <a href="https://openrailwaymap.org">OpenRailwayMap</a>',
-   maxZoom:19, subdomains:"abc", opacity:0.45, minZoom:10}
-);
-// ORM off by default — our colored lines are the primary display
-let ormEnabled = false;
-
-function toggleOrmLayer() {
-  ormEnabled = !ormEnabled;
-  const btn = document.getElementById("btnTrack");
-  if (ormEnabled) {
-    ormLayer.addTo(map);
-    if (btn) { btn.style.borderColor="#00d4ff"; btn.style.color="#00d4ff"; btn.classList.add("on"); }
-  } else {
-    if (map.hasLayer(ormLayer)) map.removeLayer(ormLayer);
-    if (btn) { btn.style.borderColor="#334"; btn.style.color="#aaa"; btn.classList.remove("on"); }
-  }
-}
+// Thin colored highlight lines so you can see SFRC vs FEC corridor
+// These sit on top of the ORM base map track lines
+const sfrcLine = L.polyline(liveCsxPts, {
+  color:"#3b82f6", weight:4, opacity:0.75, interactive:false
+}).addTo(map);
+const fecLine  = L.polyline(liveFecPts, {
+  color:"#f97316", weight:4, opacity:0.75, interactive:false
+}).addTo(map);
 
 function setTrackStatus(msg, col) {
   const el = document.getElementById("trackstatus");
   if (el) { el.textContent = msg; el.style.color = col || "#f5a623"; }
 }
-setTrackStatus("🛤 CROSSING-POINT TRACK", "#3b82f6");
+setTrackStatus("🛤 ORM MAP + CROSSING LINES", "#00d4ff");
 
-// Apply new track data — redraws ALL lines AND rebuilds engine atomically
-// Only upgrades if new data has meaningfully more points
+// Apply upgraded track data atomically
 function applyTrackData(csx, fec) {
   const csxBetter = csx && csx.length > liveCsxPts.length + 5;
   const fecBetter = fec && fec.length > liveFecPts.length + 5;
-  if (csxBetter) {
-    liveCsxPts = csx;
-    sfrcShadow.setLatLngs(liveCsxPts);
-    sfrcLine.setLatLngs(liveCsxPts);
-  }
-  if (fecBetter) {
-    liveFecPts = fec;
-    fecShadow.setLatLngs(liveFecPts);
-    fecLine.setLatLngs(liveFecPts);
-  }
+  if (csxBetter) { liveCsxPts = csx; sfrcLine.setLatLngs(liveCsxPts); }
+  if (fecBetter) { liveFecPts = fec; fecLine.setLatLngs(liveFecPts);  }
   if (csxBetter || fecBetter) {
     rebuildTrackEngine();
-    setTrackStatus("🛤 REAL OSM TRACK", "#00ee77");
+    setTrackStatus("🛤 ORM MAP + OSM LINES", "#00ee77");
   }
 }
 // Safety net: rebuild engine 1s after page load in case anything was deferred
@@ -868,10 +834,8 @@ async function loadOsmTracks() {
 
 async function refreshOsmTracks(){
   try{localStorage.removeItem(TRACK_CACHE_KEY);}catch(e){}
-  const btn=document.getElementById("btnTrack");
-  if(btn)btn.textContent="⏳";
+  setTrackStatus("⏳ loading…","#f5a623");
   await loadOsmTracks();
-  if(btn){btn.textContent="🛤 TRACK";btn.style.color="#00d4ff";}
 }
 
 setTimeout(loadOsmTracks, 800);
@@ -1427,11 +1391,11 @@ document.getElementById("liveBtn") .addEventListener("click", goLive);
 document.getElementById("s60")     .addEventListener("click", () => setSim(60));
 document.getElementById("s300")    .addEventListener("click", () => setSim(300));
 document.getElementById("modeBtn") .addEventListener("click", toggleMode);
+document.getElementById("btnOrm")  .addEventListener("click", () => setLayer("orm"));
 document.getElementById("btnSat")  .addEventListener("click", () => setLayer("sat"));
 document.getElementById("btnOsm")  .addEventListener("click", () => setLayer("osm"));
 document.getElementById("btnDark") .addEventListener("click", () => setLayer("dark"));
 document.getElementById("btnWeather").addEventListener("click", toggleWeather);
-document.getElementById("btnTrack").addEventListener("click", refreshOsmTracks);
 document.getElementById("btnCrossings").addEventListener("click", function() {
   crossingsEnabled = !crossingsEnabled;
   if (crossingsEnabled) {
