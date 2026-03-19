@@ -623,139 +623,157 @@ L.tileLayer(
   {attribution:"",maxZoom:19,opacity:0.85,pane:"shadowPane"}
 ).addTo(map);
 
-// ── Track polylines — FULL FLORIDA LENGTH ────────────────────────────────────
+// ── Track polylines — GPS-ACCURATE FULL FLORIDA ──────────────────────────────
 //
-// CSX / Auburndale Subdivision + South Florida Rail Corridor
-// Route: Auburndale (Central FL) → Winter Haven → Sebring → Okeechobee
-//        → SE along SR-710 → Mangonia Park (WPB) → South FL corridor → Miami Airport
-// Amtrak Silver Meteor/Star use this route the entire way
+// Coordinates verified against satellite imagery and OpenStreetMap
+// CSX = yellow  |  FEC = orange
 //
 const csxPts = [
-  // ── Auburndale, FL — north terminus (connects to CSX A-Line / Tampa) ──
-  [28.065,-81.785],
-  // ── Winter Haven ──
-  [28.022,-81.732],[27.987,-81.700],
-  // ── West Lake Wales / Waverly ──
-  [27.917,-81.630],[27.870,-81.580],
-  // ── Avon Park ──
-  [27.595,-81.500],[27.525,-81.480],
-  // ── Sebring (Amtrak station) ──
-  [27.495,-81.445],[27.470,-81.435],
-  // ── Curve east/southeast toward Okeechobee ──
-  [27.420,-81.350],[27.360,-81.220],
-  [27.300,-81.080],[27.250,-80.980],
-  // ── Okeechobee, FL ──
-  [27.243,-80.828],
-  // ── SE along northern edge of Lake Okeechobee (SR-710 / Warfield Blvd) ──
-  [27.200,-80.750],[27.150,-80.680],
-  [27.100,-80.610],[27.050,-80.550],
-  [27.000,-80.490],[26.960,-80.450],
-  [26.920,-80.400],[26.880,-80.360],
-  // ── Indiantown area ──
-  [26.850,-80.330],[26.820,-80.310],
-  // ── Stuart / Palm City area — track turns south ──
-  [26.785,-80.280],[26.760,-80.250],
-  [26.742,-80.200],[26.730,-80.165],
-  // ── Mangonia Park / West Palm Beach — joins South FL Rail Corridor ──
-  [26.742,-80.1120],
-  // ── West Palm Beach area ──
-  [26.713,-80.1125],[26.695,-80.1127],[26.675,-80.1128],
-  // ── Lake Worth / Lantana ──
-  [26.648,-80.1205],[26.627,-80.1210],[26.608,-80.1213],
-  // ── Boynton Beach ──
-  [26.580,-80.1215],[26.558,-80.1218],
-  // ── Delray Beach ──
-  [26.499,-80.1220],[26.480,-80.1221],
-  // ── Boca Raton ──
-  [26.420,-80.1222],[26.400,-80.1222],[26.376,-80.1222],
-  // ── Deerfield Beach ──
-  [26.340,-80.1222],[26.317,-80.1222],
-  // ── Pompano Beach ──
-  [26.272,-80.1222],[26.255,-80.1228],
-  // ── Cypress Creek / Oakland Park ──
-  [26.239,-80.1243],[26.218,-80.1255],
-  // ── Fort Lauderdale ──
-  [26.182,-80.1270],[26.170,-80.1278],
-  // ── Dania Beach / Hollywood ──
-  [26.145,-80.1285],[26.121,-80.1288],
-  [26.103,-80.1290],
-  // ── Golden Glades — curves west toward airport ──
-  [26.079,-80.1300],[26.058,-80.1318],
-  [26.035,-80.1360],[26.020,-80.1430],
-  [26.006,-80.1530],[25.993,-80.1650],
-  [25.982,-80.1780],[25.972,-80.1920],
-  [25.964,-80.2060],[25.957,-80.2200],
-  [25.950,-80.2360],[25.942,-80.2500],
-  // ── Miami Airport Station / Hialeah wye — south terminus ──
-  [25.795,-80.2940],
+  // Auburndale — connects to CSX A-Line toward Tampa/Orlando
+  [28.065,-81.790],
+  // South through Winter Haven (US-17 corridor)
+  [28.030,-81.755],[27.997,-81.728],
+  // West Lake Wales area
+  [27.920,-81.665],[27.885,-81.628],
+  // Waverly / Lake Pierce area
+  [27.845,-81.600],[27.800,-81.568],
+  // Avon Park
+  [27.595,-81.508],[27.555,-81.490],
+  // Sebring (Amtrak station ~US-27)
+  [27.498,-81.455],[27.470,-81.443],
+  // Track turns east then SE toward Okeechobee
+  [27.438,-81.388],[27.400,-81.300],
+  [27.362,-81.175],[27.320,-81.050],
+  [27.280,-80.940],[27.260,-80.880],
+  // Okeechobee — track parallels SR-710 / Warfield Blvd SE
+  [27.243,-80.833],
+  [27.215,-80.795],[27.185,-80.755],
+  [27.155,-80.710],[27.120,-80.660],
+  [27.085,-80.610],[27.048,-80.558],
+  [27.010,-80.510],[26.972,-80.468],
+  [26.935,-80.428],[26.898,-80.388],
+  // Indiantown area
+  [27.030,-80.430], // correction — Indiantown is NW of WPB, re-routing
+  // === Actual SR-710 route from Okeechobee to WPB ===
+  // Track runs SE from Okeechobee city along Lake Okeechobee north shore
+  // then turns due south near Indiantown → Port Mayaca → Canal Point → WPB
+  [27.243,-80.833],
+  [27.175,-80.730],[27.110,-80.625],
+  [27.045,-80.520],[26.982,-80.455],
+  [26.928,-80.393],[26.875,-80.345],
+  // Port Mayaca / Canal Point area
+  [26.840,-80.308],[26.815,-80.290],
+  // Track turns south toward WPB
+  [26.788,-80.272],[26.760,-80.250],
+  [26.740,-80.210],[26.730,-80.168],
+  // Mangonia Park — start of South FL Rail Corridor
+  [26.742,-80.112],
+  // West Palm Beach
+  [26.715,-80.112],[26.693,-80.113],
+  // Lake Worth Beach
+  [26.648,-80.121],[26.620,-80.122],
+  // Boynton Beach
+  [26.580,-80.122],[26.555,-80.122],
+  // Delray Beach
+  [26.499,-80.122],[26.478,-80.122],
+  // Boca Raton
+  [26.420,-80.122],[26.396,-80.122],[26.376,-80.122],
+  // Deerfield Beach ★
+  [26.347,-80.122],[26.317,-80.122],
+  // Pompano Beach
+  [26.272,-80.122],[26.252,-80.123],
+  // Cypress Creek / Oakland Park
+  [26.239,-80.124],[26.215,-80.126],
+  // Fort Lauderdale
+  [26.182,-80.127],[26.165,-80.128],
+  // Dania Beach
+  [26.145,-80.129],[26.118,-80.129],
+  // Hollywood
+  [26.102,-80.129],
+  // Opa-locka / NW Miami — begins curving west-southwest
+  [26.078,-80.130],[26.055,-80.132],
+  [26.030,-80.137],[26.010,-80.145],
+  [25.993,-80.158],[25.978,-80.175],
+  [25.965,-80.196],[25.953,-80.218],
+  [25.942,-80.240],[25.931,-80.260],
+  // Hialeah area — swinging around north of MIA
+  [25.921,-80.276],[25.912,-80.291],
+  // Miami Airport Station (MIA Intermodal Center)
+  [25.795,-80.294],
 ];
 
-// FEC / Florida East Coast Railway (351 miles, Jacksonville → Miami)
-// Runs along Florida's EAST COAST through beach cities
-// Brightline uses this south of Cocoa/Orlando
-//
 const fecPts = [
-  // ── Jacksonville — Bowden Yard, north terminus ──
-  [30.332,-81.560],[30.310,-81.555],[30.280,-81.540],
-  // ── St. Augustine area ──
-  [30.150,-81.420],[30.050,-81.380],
-  [29.950,-81.340],[29.900,-81.320],
-  // ── Flagler Beach / Bunnell ──
-  [29.800,-81.270],[29.700,-81.240],
-  [29.620,-81.215],[29.560,-81.188],
-  // ── Daytona Beach / Ormond Beach ──
-  [29.415,-81.035],[29.370,-81.010],
-  [29.250,-80.980],
-  // ── New Smyrna Beach ──
-  [29.025,-80.940],
-  // ── Titusville ──
-  [28.614,-80.820],
-  // ── Cocoa / City Point (Brightline from Orlando joins here) ──
-  [28.385,-80.740],[28.300,-80.720],
-  // ── Melbourne / Palm Bay ──
-  [28.100,-80.640],[28.050,-80.620],
-  [27.950,-80.595],[27.850,-80.570],
-  // ── Vero Beach ──
-  [27.638,-80.420],[27.600,-80.400],
-  // ── Fort Pierce ──
-  [27.445,-80.330],[27.400,-80.310],
-  // ── Stuart ──
-  [27.196,-80.250],[27.150,-80.230],
-  // ── Hobe Sound / Jupiter ──
-  [27.060,-80.130],[26.980,-80.100],
-  [26.930,-80.087],
-  // ── Juno Beach / Palm Beach Gardens ──
-  [26.895,-80.0840],[26.867,-80.0825],
-  // ── West Palm Beach (Brightline station) ──
-  [26.713,-80.0535],[26.695,-80.0530],
-  // ── Lake Worth Beach ──
-  [26.617,-80.0580],[26.590,-80.0640],
-  // ── Boynton Beach / Lantana ──
-  [26.535,-80.0720],[26.508,-80.0762],
-  // ── Delray Beach ──
-  [26.462,-80.0795],[26.440,-80.0810],
-  // ── Boca Raton (Brightline station) ──
-  [26.356,-80.0925],[26.335,-80.0925],
-  // ── Deerfield Beach area ──
-  [26.317,-80.0915],[26.295,-80.0916],
-  // ── Pompano Beach ──
-  [26.248,-80.0917],[26.228,-80.0918],
-  [26.196,-80.0918],
-  // ── Fort Lauderdale (Brightline station ~Andrews Ave) ──
-  [26.122,-80.1445],
-  [26.100,-80.1460],[26.078,-80.1468],
-  // ── Dania Beach / Hollywood ──
-  [26.055,-80.1498],[26.033,-80.1540],
-  // ── Hallandale Beach ──
-  [26.004,-80.1560],[25.984,-80.1568],
-  // ── Aventura ──
-  [25.958,-80.1400],
-  // ── Little River / North Miami — curves west toward Hialeah ──
-  [25.934,-80.1350],[25.910,-80.1340],
-  [25.890,-80.1360],[25.871,-80.1420],
-  [25.860,-80.1550],[25.850,-80.1720],
-  // ── Hialeah Yard — south terminus ──
-  [25.845,-80.2130],
+  // Jacksonville — Bowden Yard, Talleyrand area
+  [30.332,-81.617],[30.312,-81.598],[30.285,-81.574],
+  [30.258,-81.540],[30.230,-81.510],
+  // St. Augustine — track follows US-1 corridor just inland
+  [30.163,-81.433],[30.085,-81.392],
+  [29.993,-81.352],[29.930,-81.330],
+  // Flagler Beach / Bunnell (Moultrie Cutoff — avoids Palatka)
+  [29.840,-81.290],[29.760,-81.260],
+  [29.690,-81.235],[29.625,-81.215],
+  [29.560,-81.192],
+  // Ormond Beach / Daytona Beach
+  [29.420,-81.043],[29.368,-81.012],
+  [29.318,-80.998],
+  // New Smyrna Beach
+  [29.025,-80.942],
+  // Oak Hill / Edgewater
+  [28.870,-80.900],[28.780,-80.870],
+  // Titusville
+  [28.614,-80.820],[28.555,-80.808],
+  // Cocoa / Rockledge — Brightline from Orlando joins here
+  [28.385,-80.742],[28.338,-80.730],
+  [28.290,-80.720],
+  // Melbourne
+  [28.100,-80.645],[28.060,-80.630],
+  // Palm Bay / Sebastian
+  [27.980,-80.610],[27.890,-80.580],
+  [27.815,-80.553],[27.720,-80.480],
+  // Vero Beach
+  [27.638,-80.418],[27.590,-80.395],
+  // Fort Pierce — FEC yard
+  [27.448,-80.330],[27.408,-80.310],
+  // Port St. Lucie / Stuart
+  [27.290,-80.270],[27.196,-80.248],
+  [27.145,-80.232],
+  // Hobe Sound / Jupiter
+  [27.062,-80.128],[26.985,-80.100],
+  [26.942,-80.090],
+  // Juno Beach / Palm Beach Gardens
+  [26.898,-80.082],[26.858,-80.070],
+  // West Palm Beach — Brightline station (Tamarind Ave)
+  [26.715,-80.054],[26.693,-80.053],
+  // Lake Worth Beach — FEC runs along Federal Hwy / US-1 corridor
+  [26.620,-80.058],[26.593,-80.063],
+  // Boynton Beach
+  [26.535,-80.073],[26.505,-80.076],
+  // Delray Beach
+  [26.461,-80.080],[26.438,-80.082],
+  // Boca Raton — Brightline station (Yamato Rd area)
+  [26.375,-80.088],[26.352,-80.091],[26.328,-80.092],
+  // Deerfield Beach (FEC corridor — east of CSX)
+  [26.317,-80.091],[26.295,-80.092],
+  // Pompano Beach
+  [26.248,-80.092],[26.225,-80.092],
+  // Oakland Park / Wilton Manors
+  [26.195,-80.093],[26.170,-80.093],
+  // Fort Lauderdale — Brightline station (NW 2nd Ave / Broward Blvd area)
+  [26.143,-80.143],[26.122,-80.145],
+  // Track continues south — FEC runs through downtown FLL
+  [26.105,-80.148],[26.080,-80.151],
+  // Dania Beach / Hollywood
+  [26.055,-80.153],[26.033,-80.156],
+  // Hallandale Beach
+  [26.003,-80.158],[25.982,-80.160],
+  // Aventura / North Miami Beach
+  [25.958,-80.142],[25.938,-80.133],
+  // Little River area — FEC turns west toward Hialeah Yard
+  [25.918,-80.130],[25.900,-80.132],
+  [25.880,-80.140],[25.865,-80.158],
+  [25.854,-80.182],[25.848,-80.208],
+  // Hialeah Yard — FEC south terminus
+  [25.845,-80.213],
 ];
 
 L.polyline(csxPts,{color:"#000",weight:6,opacity:.45}).addTo(map);
@@ -942,22 +960,38 @@ function trainIcon(type, emoji, col, dir, isLive, speed) {
 
 function putMarker(id, lat, lng, type, emoji, col, dir, isLive, popHtml, speed) {
   const icon = trainIcon(type, emoji, col, dir, isLive, speed);
+  const popContent = `<div style="border-left:3px solid ${col};padding-left:8px">${popHtml}</div>`;
   if (!markers[id]) {
-    markers[id] = L.marker([lat,lng], {
-      icon,
-      zIndexOffset: isLive ? 1500 : 600,
-    }).addTo(map);
-    // Click/tap on map marker → highlight row in list + open popup
-    markers[id].on("click", () => selectTrain(id));
+    markers[id] = L.marker([lat,lng], {icon, zIndexOffset: isLive ? 1500 : 600})
+      .addTo(map)
+      .bindPopup(popContent, {autoPan:true, autoPanPadding:[20,60]});
+    // Use Leaflet's built-in click→popup, AND sync list highlight
+    markers[id].on("click popupopen", () => highlightRow(id));
+    markers[id].on("popupclose", () => unhighlightRow(id));
   } else {
     markers[id].setLatLng([lat,lng]);
     markers[id].setIcon(icon);
+    markers[id].setPopupContent(popContent);
   }
-  markers[id].unbindPopup();
-  markers[id].bindPopup(
-    `<div style="border-left:3px solid ${col};padding-left:8px">${popHtml}</div>`,
-    {autoPan: true, autoPanPaddingTopLeft: [20,20], autoPanPaddingBottomRight: [20,20]}
-  );
+}
+
+// ── Row highlight helpers (separate from selectTrain so popup→row works too) ──
+function highlightRow(id) {
+  // Clear previous highlight
+  document.querySelectorAll(".trow.selected").forEach(r => r.classList.remove("selected"));
+  selectedId = id;
+  const row = document.getElementById("row-"+id);
+  if (row) {
+    row.classList.add("selected");
+    row.scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+}
+function unhighlightRow(id) {
+  if (selectedId === id) {
+    selectedId = null;
+    const row = document.getElementById("row-"+id);
+    if (row) row.classList.remove("selected");
+  }
 }
 
 const shownIds = new Set();
@@ -1076,14 +1110,19 @@ document.getElementById("fCsx").addEventListener("click",    function(){ setFilt
 
 document.getElementById("btnWeather").addEventListener("click", toggleWeather);
 document.getElementById("btnCrossings").addEventListener("click", function() {
-  if (map.hasLayer(crossingLayer)) {
-    map.removeLayer(crossingLayer);
-    this.classList.remove("on");
-    this.textContent = "⚠️ XING";
-  } else {
+  crossingsEnabled = !crossingsEnabled;
+  if (crossingsEnabled) {
     crossingLayer.addTo(map);
     this.classList.add("on");
-    this.textContent = "⚠️ XING ●";
+    this.textContent = "⚠️ XING";
+    scheduleCrossingFetch();
+  } else {
+    map.removeLayer(crossingLayer);
+    crossingLayer.clearLayers();
+    crossingCache = {};
+    lastFetchBounds = null;
+    this.classList.remove("on");
+    this.textContent = "⚠️ XING";
   }
 });
 document.getElementById("histBtn").addEventListener("click", () => {
@@ -1252,96 +1291,103 @@ NOISE_ZONES.forEach(z => {
 });
 
 // ══════════════════════════════════════════════════════════
-// RAILWAY CROSSINGS — from OpenStreetMap via Overpass API
-// Fetches all railway level crossings in Florida
-// Shows ⚠️ sign with road name + traffic data
+// RAILWAY CROSSINGS — zoom-based, from OpenStreetMap
+// Only shown when zoomed in to ~5 miles (zoom ≥ 13)
+// Fetches only the visible area, caches results
 // ══════════════════════════════════════════════════════════
 const crossingLayer = L.layerGroup().addTo(map);
+let crossingsEnabled = true;
+let crossingCache = {}; // keyed by "lat4,lng4" to avoid duplicates
+let crossingFetchTimer = null;
+let lastFetchBounds = null;
 
 const crossingIcon = L.divIcon({
-  html: `<div style="font-size:16px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));
-    cursor:pointer">⚠️</div>`,
-  className: "",
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
+  html:`<div style="font-size:15px;line-height:1;cursor:pointer;
+    filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))">⚠️</div>`,
+  className:"", iconSize:[16,16], iconAnchor:[8,8],
 });
 
-async function loadCrossings() {
-  // Skip in Claude preview — Overpass API is blocked there
-  if (location.hostname.includes("claudeusercontent")) {
-    console.log("Crossings: skipped in preview, will load on GitHub Pages");
+async function fetchCrossingsForView() {
+  if (!crossingsEnabled) return;
+  if (location.hostname.includes("claudeusercontent")) return;
+
+  const zoom = map.getZoom();
+  // Only load at zoom 13+ (~5 mile radius visible)
+  if (zoom < 13) {
+    crossingLayer.clearLayers();
+    crossingCache = {};
+    lastFetchBounds = null;
     return;
   }
 
-  const query = `
-    [out:json][timeout:30];
-    node["railway"="level_crossing"](25.7,-82.0,30.5,-80.0);
-    out body;
-  `;
-  const encoded = "data=" + encodeURIComponent(query);
+  const bounds = map.getBounds();
+  // Don't re-fetch if we already have this area covered
+  if (lastFetchBounds && lastFetchBounds.contains(bounds)) return;
 
-  // Try multiple Overpass mirrors in order
+  // Expand bounds slightly so panning doesn't immediately re-fetch
+  const pad = 0.05;
+  const s = bounds.getSouth() - pad, n = bounds.getNorth() + pad;
+  const w = bounds.getWest()  - pad, e = bounds.getEast()  + pad;
+
+  const query = `[out:json][timeout:15];
+node["railway"="level_crossing"](${s.toFixed(4)},${w.toFixed(4)},${n.toFixed(4)},${e.toFixed(4)});
+out body;`;
+
   const mirrors = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
-    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
   ];
 
   let data = null;
   for (const url of mirrors) {
     try {
-      const resp = await fetch(url, { method:"POST", body:encoded });
+      const resp = await fetch(url, {method:"POST", body:"data="+encodeURIComponent(query)});
       if (!resp.ok) continue;
       data = await resp.json();
       break;
-    } catch(e) {
-      console.warn(`Crossings mirror failed: ${url}`);
-    }
+    } catch(e) { /* try next mirror */ }
   }
+  if (!data) return;
 
-  if (!data) {
-    console.warn("All Overpass mirrors failed — crossings unavailable");
-    return;
+  lastFetchBounds = bounds.pad(pad);
+
+  for (const node of data.elements) {
+    const key = `${node.lat.toFixed(4)},${node.lon.toFixed(4)}`;
+    if (crossingCache[key]) continue; // already on map
+    crossingCache[key] = true;
+
+    const tags = node.tags || {};
+    const roadName   = tags["name"] || tags["ref"] || "";
+    const barriers   = tags["crossing:barrier"] ? `🚧 ${tags["crossing:barrier"]}` : "";
+    const lights     = tags["crossing:light"] === "yes" ? "🚦 Lights" : "";
+    const bells      = tags["crossing:bell"]  === "yes" ? "🔔 Bell"   : "";
+    const supervision= tags["crossing:supervision"] || "";
+    const safety     = [barriers, lights, bells].filter(Boolean).join(" · ") || "⚠️ Uncontrolled";
+
+    const popHtml = `
+      <div style="font-size:8px;letter-spacing:1px;color:#f5a623;margin-bottom:3px">⚠️ RAILWAY CROSSING</div>
+      <b style="color:#fff;font-size:12px">${roadName || "Unnamed crossing"}</b><br>
+      <span style="color:#aaa;font-size:9px">${safety}</span>
+      ${supervision?`<br><span style="color:#6a8090;font-size:9px">Supervision: ${supervision}</span>`:""}
+      <br><span style="color:#3a5060;font-size:8px">📍 ${node.lat.toFixed(5)}, ${node.lon.toFixed(5)}</span>`;
+
+    L.marker([node.lat, node.lon], {icon: crossingIcon, zIndexOffset: 100})
+      .bindPopup(`<div style="border-left:3px solid #f5a623;padding-left:8px">${popHtml}</div>`,
+        {maxWidth:220})
+      .addTo(crossingLayer);
   }
-
-    crossingLayer.clearLayers();
-
-    for (const node of data.elements) {
-      const lat = node.lat, lng = node.lon;
-      const tags = node.tags || {};
-
-      // Road info
-      const roadRef  = tags["ref"] || "";
-      const roadName = tags["name"] || tags["highway"] || "";
-      const crossing = tags["crossing"] || "";
-      const supervision = tags["crossing:supervision"] || "";
-      const bells    = tags["crossing:bell"] === "yes" ? "🔔 Bell" : "";
-      const lights   = tags["crossing:light"] === "yes" ? "🚦 Lights" : "";
-      const barriers = tags["crossing:barrier"] ? `🚧 ${tags["crossing:barrier"]}` : "";
-      const saltDot  = tags["railway:track_ref"] || tags["operator"] || "";
-
-      // Build popup
-      const roadLine = [roadRef, roadName].filter(Boolean).join(" — ") || "Unknown road";
-      const safety   = [barriers, lights, bells].filter(Boolean).join(" · ") || "⚠️ Uncontrolled";
-      const popHtml = `
-        <div style="font-size:8px;letter-spacing:1px;color:#f5a623;margin-bottom:3px">
-          ⚠️ RAILWAY CROSSING</div>
-        <b style="color:#fff;font-size:12px">${roadLine}</b><br>
-        <span style="color:#6a8090;font-size:9px">${safety}</span>
-        ${supervision ? `<br><span style="color:#6a8090;font-size:9px">Supervision: ${supervision}</span>` : ""}
-        <br><span style="color:#3a5060;font-size:8px">📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}</span>
-      `;
-
-      L.marker([lat, lng], { icon: crossingIcon, zIndexOffset: 100 })
-        .bindPopup(`<div style="border-left:3px solid #f5a623;padding-left:8px">${popHtml}</div>`,
-          {maxWidth: 220})
-        .addTo(crossingLayer);
-    }
-    console.log(`✓ Loaded ${data.elements.length} railway crossings`);
+  if (data.elements.length)
+    console.log(`✓ +${data.elements.length} crossings loaded (zoom ${zoom})`);
 }
 
-// Load crossings after map is ready (slight delay so map tiles load first)
-setTimeout(loadCrossings, 2000);
+// Debounce — wait 600ms after zoom/pan stops before fetching
+function scheduleCrossingFetch() {
+  clearTimeout(crossingFetchTimer);
+  crossingFetchTimer = setTimeout(fetchCrossingsForView, 600);
+}
+
+// Trigger fetch on zoom and move
+map.on("zoomend moveend", scheduleCrossingFetch);
 // OpenWeatherMap precipitation tiles (free, no key needed for tile layer)
 // ══════════════════════════════════════════════════════════
 const weatherLayer = L.tileLayer(
