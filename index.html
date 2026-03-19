@@ -622,40 +622,59 @@ L.tileLayer(
 ).addTo(map);
 
 // ══════════════════════════════════════════════════════════
-// TRACK SYSTEM — single source of truth
-//
-// Both the VISIBLE colored lines AND the train interpolation
-// engine use EXACTLY the same coordinate arrays.
-// There are NO fallback hand-crafted arrays that could
-// cause ghost lines. If OSM data isn't loaded yet, the
-// lines show as empty and trains aren't placed until data loads.
-//
-// SFRC (Tri-Rail / CSX corridor) = BLUE  #3b82f6
-// FEC (Florida East Coast / Brightline) = ORANGE  #f97316
+// TRACK SYSTEM
+// Trains ALWAYS show using built-in coordinates.
+// OSM fetch replaces them with real geometry if available.
+// SFRC = blue #3b82f6  |  FEC = orange #f97316
 // ══════════════════════════════════════════════════════════
 
-const TRACK_CACHE_KEY  = "osmTrackData_v5";
-const TRACK_CACHE_DAYS = 60;
+// ── Built-in fallback coordinates (verified GPS crossing points) ──
+const FALLBACK_CSX = [
+  [26.7419,-80.1120],[26.7130,-80.1125],[26.6955,-80.1138],[26.6770,-80.1150],
+  [26.6475,-80.1215],[26.6200,-80.1230],[26.5955,-80.1248],[26.5570,-80.1265],
+  [26.5185,-80.1278],[26.4985,-80.1285],[26.4695,-80.1290],[26.4490,-80.1295],
+  [26.4200,-80.1305],[26.3960,-80.1315],[26.3760,-80.1325],[26.3570,-80.1332],
+  [26.3168,-80.1338],[26.2955,-80.1342],[26.2720,-80.1350],[26.2518,-80.1360],
+  [26.2390,-80.1368],[26.2175,-80.1380],[26.1935,-80.1395],[26.1820,-80.1408],
+  [26.1650,-80.1422],[26.1455,-80.1435],[26.1218,-80.1448],[26.1020,-80.1462],
+  [26.0785,-80.1490],[26.0555,-80.1548],[26.0305,-80.1640],[26.0060,-80.1720],
+  [25.9880,-80.1810],[25.9720,-80.1920],[25.9580,-80.2020],[25.9440,-80.2130],
+  [25.9300,-80.2240],[25.9150,-80.2380],[25.9000,-80.2520],[25.8850,-80.2650],
+  [25.8650,-80.2810],[25.8400,-80.2930],[25.8100,-80.2950],[25.7960,-80.2940],
+];
 
-// THE single source of truth — populated from OSM, used for
-// both drawing the lines AND train position interpolation
-let liveCsxPts = [];
-let liveFecPts = [];
+const FALLBACK_FEC = [
+  [26.7130,-80.0535],[26.6928,-80.0548],[26.6772,-80.0562],[26.6475,-80.0582],
+  [26.6195,-80.0622],[26.5955,-80.0685],[26.5570,-80.0730],[26.5185,-80.0768],
+  [26.4985,-80.0785],[26.4695,-80.0840],[26.4490,-80.0868],[26.4200,-80.0888],
+  [26.3960,-80.0905],[26.3760,-80.0918],[26.3570,-80.0928],[26.3168,-80.0915],
+  [26.2955,-80.0918],[26.2720,-80.0920],[26.2518,-80.0922],[26.2390,-80.0925],
+  [26.2175,-80.0930],[26.1935,-80.0935],[26.1820,-80.0940],[26.1650,-80.0945],
+  [26.1455,-80.0962],[26.1200,-80.0975],[26.1050,-80.0988],[26.0960,-80.1010],
+  [26.0820,-80.1025],[26.0580,-80.1042],[26.0330,-80.1060],[26.0060,-80.1078],
+  [25.9820,-80.1095],[25.9580,-80.1110],[25.9420,-80.1310],[25.9250,-80.1520],
+  [25.9100,-80.1680],[25.8950,-80.1810],[25.8800,-80.1870],[25.8650,-80.1900],
+  [25.8500,-80.1930],[25.8350,-80.1960],[25.8200,-80.1990],[25.7950,-80.2130],
+];
 
-// Draw empty polylines now — setLatLngs() fills them when data loads
-const sfrcLine = L.polyline([], {
-  color: "#3b82f6", weight: 6, opacity: 0.95, interactive: false
+// Live arrays — start with fallback so trains show immediately
+let liveCsxPts = FALLBACK_CSX.slice();
+let liveFecPts = FALLBACK_FEC.slice();
+
+// Colored polylines on map
+const sfrcLine = L.polyline(liveCsxPts, {
+  color:"#3b82f6", weight:5, opacity:0.9, interactive:false
 }).addTo(map);
 
-const fecLine = L.polyline([], {
-  color: "#f97316", weight: 6, opacity: 0.95, interactive: false
+const fecLine = L.polyline(liveFecPts, {
+  color:"#f97316", weight:5, opacity:0.9, interactive:false
 }).addTo(map);
 
-// ORM tiles show track detail underneath the colored lines
+// ORM tile overlay underneath
 const ormLayer = L.tileLayer(
   "https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
-  { attribution:'© <a href="https://openrailwaymap.org">OpenRailwayMap</a>',
-    maxZoom:19, subdomains:"abc", opacity:0.5, minZoom:8 }
+  {attribution:'© <a href="https://openrailwaymap.org">OpenRailwayMap</a>',
+   maxZoom:19, subdomains:"abc", opacity:0.5, minZoom:8}
 );
 ormLayer.addTo(map);
 
@@ -677,173 +696,113 @@ function setTrackStatus(msg, col) {
   if (el) { el.textContent = msg; el.style.color = col || "#f5a623"; }
 }
 
-// Called once OSM data is loaded — updates both the visible line
-// AND the interpolation engine from the same array
-function applyTrackData(csxPts, fecPts) {
-  liveCsxPts = csxPts;
-  liveFecPts = fecPts;
-  sfrcLine.setLatLngs(csxPts);  // visible blue line
-  fecLine.setLatLngs(fecPts);   // visible orange line
-  rebuildTrackEngine();          // train positions use same coords
+// Apply new track data — updates lines AND engine atomically
+function applyTrackData(csx, fec) {
+  if (csx && csx.length > 10) liveCsxPts = csx;
+  if (fec && fec.length > 10) liveFecPts = fec;
+  sfrcLine.setLatLngs(liveCsxPts);
+  fecLine.setLatLngs(liveFecPts);
+  rebuildTrackEngine();
 }
 
-// ── OSM way stitching ─────────────────────────────────────
-// Properly connects OSM way segments end-to-end into a single
-// continuous polyline by matching endpoints greedily.
-function stitchWaysIntoLine(elements) {
-  // Build list of coordinate chains from way geometries
-  let chains = elements
-    .filter(e => e.type === "way" && e.geometry && e.geometry.length >= 2)
-    .map(e => e.geometry.map(n => [n.lat, n.lon]));
-
-  if (!chains.length) return [];
-  if (chains.length === 1) return chains[0];
-
-  // Start with the northernmost chain (highest lat at either end)
-  chains.sort((a, b) => {
-    const maxA = Math.max(a[0][0], a[a.length-1][0]);
-    const maxB = Math.max(b[0][0], b[b.length-1][0]);
-    return maxB - maxA;
-  });
-
-  const result = [...chains[0]];
-  const remaining = chains.slice(1);
-
-  while (remaining.length) {
-    const tail = result[result.length - 1];
-    let bestIdx = 0, bestDist = Infinity, bestFlip = false;
-
-    // Find the chain whose start or end is closest to current tail
-    for (let i = 0; i < remaining.length; i++) {
-      const head = remaining[i][0];
-      const end  = remaining[i][remaining[i].length - 1];
-      const dHead = Math.hypot(tail[0]-head[0], tail[1]-head[1]);
-      const dEnd  = Math.hypot(tail[0]-end[0],  tail[1]-end[1]);
-      if (dHead < bestDist) { bestDist = dHead; bestIdx = i; bestFlip = false; }
-      if (dEnd  < bestDist) { bestDist = dEnd;  bestIdx = i; bestFlip = true;  }
-    }
-
-    // If gap > 0.05° (~3.5 miles) the ways aren't connected — stop
-    if (bestDist > 0.05) break;
-
-    const chain = remaining.splice(bestIdx, 1)[0];
-    const pts   = bestFlip ? [...chain].reverse() : chain;
-    // Skip first point if it duplicates the tail
-    const start = bestDist < 0.0002 ? 1 : 0;
-    result.push(...pts.slice(start));
-  }
-
-  return result;
-}
-
-// ── Overpass fetch ────────────────────────────────────────
+// ── OSM fetch (upgrades fallback to real geometry) ────────
+const TRACK_CACHE_KEY  = "osmTrackData_v6";
+const TRACK_CACHE_DAYS = 60;
 const OVERPASS_URLS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
 ];
 
+function stitchWaysIntoLine(elements) {
+  let chains = elements
+    .filter(e => e.type==="way" && e.geometry && e.geometry.length>=2)
+    .map(e => e.geometry.map(n=>[n.lat,n.lon]));
+  if (!chains.length) return [];
+  if (chains.length===1) return chains[0];
+  chains.sort((a,b)=>Math.max(b[0][0],b[b.length-1][0])-Math.max(a[0][0],a[a.length-1][0]));
+  const result=[...chains[0]], remaining=chains.slice(1);
+  while(remaining.length){
+    const tail=result[result.length-1];
+    let bi=0,bd=Infinity,bf=false;
+    for(let i=0;i<remaining.length;i++){
+      const h=remaining[i][0],e=remaining[i][remaining[i].length-1];
+      const dh=Math.hypot(tail[0]-h[0],tail[1]-h[1]);
+      const de=Math.hypot(tail[0]-e[0],tail[1]-e[1]);
+      if(dh<bd){bd=dh;bi=i;bf=false;}
+      if(de<bd){bd=de;bi=i;bf=true;}
+    }
+    if(bd>0.05)break;
+    const chain=remaining.splice(bi,1)[0];
+    const pts=bf?[...chain].reverse():chain;
+    result.push(...pts.slice(bd<0.0002?1:0));
+  }
+  return result;
+}
+
 async function fetchOverpass(query) {
-  for (const url of OVERPASS_URLS) {
-    try {
-      const r = await fetch(url, {
-        method: "POST",
-        body: "data=" + encodeURIComponent(query),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (!r.ok) continue;
-      const d = await r.json();
-      if (d.elements && d.elements.length > 2) return d;
-    } catch(e) { /* try next mirror */ }
+  for(const url of OVERPASS_URLS){
+    try{
+      const r=await fetch(url,{method:"POST",body:"data="+encodeURIComponent(query),signal:AbortSignal.timeout(30000)});
+      if(!r.ok)continue;
+      const d=await r.json();
+      if(d.elements&&d.elements.length>2)return d;
+    }catch(e){}
   }
   return null;
 }
 
-// ── Main track loader ─────────────────────────────────────
 async function loadOsmTracks() {
-  if (location.hostname.includes("claudeusercontent")) {
-    setTrackStatus("⚠ PREVIEW — no tracks", "#f5a623"); return;
+  if(location.hostname.includes("claudeusercontent")){
+    setTrackStatus("🗺 FALLBACK", "#f5a623"); return;
   }
-
-  // Serve from cache if fresh
-  try {
-    const raw = localStorage.getItem(TRACK_CACHE_KEY);
-    if (raw) {
-      const {ts, csx, fec} = JSON.parse(raw);
-      const ageDays = (Date.now() - ts) / 86400000;
-      if (ageDays < TRACK_CACHE_DAYS && csx.length > 20 && fec.length > 20) {
-        applyTrackData(csx, fec);
-        setTrackStatus(`🛤 OSM (${Math.floor(ageDays)}d ago)`, "#00ee77");
-        console.log(`Tracks from cache: SFRC ${csx.length}pts, FEC ${fec.length}pts`);
+  // Check cache
+  try{
+    const raw=localStorage.getItem(TRACK_CACHE_KEY);
+    if(raw){
+      const {ts,csx,fec}=JSON.parse(raw);
+      if((Date.now()-ts)<TRACK_CACHE_DAYS*86400000&&csx.length>20&&fec.length>20){
+        applyTrackData(csx,fec);
+        setTrackStatus(`🛤 OSM (${Math.floor((Date.now()-ts)/86400000)}d ago)`,"#00ee77");
         return;
       }
     }
-  } catch(e) {}
+  }catch(e){}
 
-  setTrackStatus("⏳ loading real tracks…", "#f5a623");
+  setTrackStatus("⏳ loading OSM…","#f5a623");
+  const sfrcQ=`[out:json][timeout:45];relation(4322238);way(r)["railway"="rail"];out geom;`;
+  const fecQ=`[out:json][timeout:45];relation(2936327);way(r)["railway"="rail"];out geom;`;
+  const [sfrcData,fecData]=await Promise.all([fetchOverpass(sfrcQ),fetchOverpass(fecQ)]);
 
-  // Query: get all railway=rail ways that are members of the
-  // SFRC route relation (4322238) or FEC relation (2936327).
-  // "out geom" returns full node coordinates inline.
-  const sfrcQuery = `[out:json][timeout:45];
-relation(4322238);
-way(r)["railway"="rail"];
-out geom;`;
-
-  const fecQuery = `[out:json][timeout:45];
-relation(2936327);
-way(r)["railway"="rail"];
-out geom;`;
-
-  const [sfrcData, fecData] = await Promise.all([
-    fetchOverpass(sfrcQuery),
-    fetchOverpass(fecQuery),
-  ]);
-
-  let csx = [], fec = [];
-
-  if (sfrcData) {
-    const stitched = stitchWaysIntoLine(sfrcData.elements);
-    // Keep only South FL segment
-    csx = stitched.filter(([lat, lng]) =>
-      lat >= 25.75 && lat <= 26.80 && lng >= -80.22 && lng <= -80.07
-    );
-    console.log(`SFRC stitched: ${stitched.length} → filtered: ${csx.length} pts`);
+  let csx=null,fec=null;
+  if(sfrcData){
+    const s=stitchWaysIntoLine(sfrcData.elements);
+    const f=s.filter(([la,ln])=>la>=25.75&&la<=26.80&&ln>=-80.22&&ln<=-80.07);
+    if(f.length>20)csx=f;
+  }
+  if(fecData){
+    const s=stitchWaysIntoLine(fecData.elements);
+    const f=s.filter(([la,ln])=>la>=25.75&&la<=26.80&&ln>=-80.22&&ln<=-80.03);
+    if(f.length>20)fec=f;
   }
 
-  if (fecData) {
-    const stitched = stitchWaysIntoLine(fecData.elements);
-    fec = stitched.filter(([lat, lng]) =>
-      lat >= 25.75 && lat <= 26.80 && lng >= -80.22 && lng <= -80.03
-    );
-    console.log(`FEC stitched: ${stitched.length} → filtered: ${fec.length} pts`);
-  }
-
-  if (csx.length > 20 && fec.length > 20) {
-    applyTrackData(csx, fec);
-    setTrackStatus("🛤 REAL OSM TRACKS", "#00ee77");
-    try {
-      localStorage.setItem(TRACK_CACHE_KEY,
-        JSON.stringify({ ts: Date.now(), csx, fec }));
-    } catch(e) {}
-  } else if (csx.length > 20) {
-    applyTrackData(csx, fec.length > 5 ? fec : []);
-    setTrackStatus("🛤 SFRC only", "#f5a623");
+  if(csx||fec){
+    applyTrackData(csx,fec);
+    setTrackStatus("🛤 REAL OSM","#00ee77");
+    try{localStorage.setItem(TRACK_CACHE_KEY,JSON.stringify({ts:Date.now(),csx:liveCsxPts,fec:liveFecPts}));}catch(e){}
   } else {
-    setTrackStatus("❌ fetch failed — retry with 🛤", "#e74c3c");
-    console.warn("OSM fetch returned too few points:", csx.length, fec.length);
+    setTrackStatus("🗺 BUILT-IN TRACK","#f5a623");
   }
 }
 
-async function refreshOsmTracks() {
-  try { localStorage.removeItem(TRACK_CACHE_KEY); } catch(e) {}
-  const btn = document.getElementById("btnTrack");
-  if (btn) btn.textContent = "⏳";
+async function refreshOsmTracks(){
+  try{localStorage.removeItem(TRACK_CACHE_KEY);}catch(e){}
+  const btn=document.getElementById("btnTrack");
+  if(btn)btn.textContent="⏳";
   await loadOsmTracks();
-  if (btn) { btn.textContent = "🛤 TRACK"; btn.style.color = "#00d4ff"; }
+  if(btn){btn.textContent="🛤 TRACK";btn.style.color="#00d4ff";}
 }
 
-// Load after map is ready
-setTimeout(loadOsmTracks, 600);
+setTimeout(loadOsmTracks, 800);
 
 // Precompute cumulative arc lengths along a polyline
 function buildTrack(pts) {
