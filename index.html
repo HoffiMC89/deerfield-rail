@@ -628,28 +628,10 @@ L.tileLayer(
 // Line is drawn crossing-to-crossing so it follows the real track precisely.
 // CSX/SFRTA = yellow  |  FEC/Brightline = orange
 //
-// ── CSX / South Florida Rail Corridor ──
-// Runs parallel to Military Trail / NW 31st Ave, WEST of I-95
+// ── CSX / South Florida Rail Corridor (SFRC) ──
+// South Florida section only — Mangonia Park (WPB) to Miami Airport
+// Runs parallel to Military Trail / NW 27th Ave, WEST of I-95
 const csxPts = [
-  // ── NORTH: Auburndale to Mangonia Park (inland route) ──
-  [28.065,-81.790],
-  [28.030,-81.755],[27.997,-81.728],
-  [27.920,-81.665],[27.885,-81.628],
-  [27.845,-81.600],[27.800,-81.568],
-  [27.595,-81.508],[27.555,-81.490],
-  [27.498,-81.455],[27.470,-81.443],  // Sebring
-  [27.438,-81.388],[27.400,-81.300],
-  [27.362,-81.175],[27.320,-81.050],
-  [27.280,-80.940],[27.260,-80.880],
-  [27.243,-80.833],                    // Okeechobee
-  [27.215,-80.795],[27.185,-80.755],
-  [27.155,-80.710],[27.120,-80.660],
-  [27.085,-80.610],[27.048,-80.558],
-  [27.010,-80.510],[26.972,-80.468],
-  [26.928,-80.393],[26.875,-80.345],
-  [26.840,-80.308],[26.815,-80.290],
-  [26.788,-80.272],[26.760,-80.250],
-  [26.740,-80.210],[26.730,-80.168],
   // ── SOUTH FLORIDA RAIL CORRIDOR: crossing-to-crossing ──
   [26.7419,-80.1120],  // Mangonia Park station
   [26.7130,-80.1125],  // 45th St, WPB
@@ -682,39 +664,26 @@ const csxPts = [
   [26.0785,-80.1490],  // Miramar Pkwy
   [26.0555,-80.1548],  // Pembroke Rd
   [26.0305,-80.1640],  // Hallandale Beach Blvd
-  [26.0060,-80.1720],  // Golden Glades / NW 199th
-  [25.9820,-80.1850],  // NW 183rd St
-  [25.9650,-80.2020],  // NW 167th St
-  [25.9500,-80.2200],  // Opa-locka
-  [25.9320,-80.2410],  // NW 135th St
-  [25.9120,-80.2625],  // NW 119th St
-  [25.7950,-80.2940],  // ★ Miami Airport Station terminus
+  [26.0060,-80.1720],  // Golden Glades / NW 199th — SFRC curves SW here
+  [25.9880,-80.1810],  // NW 191st St
+  [25.9720,-80.1920],  // NW 183rd St
+  [25.9580,-80.2020],  // NW 175th St
+  [25.9440,-80.2130],  // NW 167th St
+  [25.9300,-80.2240],  // NW 154th St / Opa-locka area
+  [25.9150,-80.2380],  // NW 138th St
+  [25.9000,-80.2520],  // NW 125th St
+  [25.8850,-80.2650],  // NW 119th St
+  [25.8650,-80.2810],  // NW 103rd St — curve toward Miami Airport
+  [25.8400,-80.2930],  // NW 79th St area
+  [25.8100,-80.2950],  // NW 58th St
+  [25.7960,-80.2940],  // ★ Miami Airport / Hialeah — SFRC terminus
 ];
 
 // ── FEC / Florida East Coast / Brightline corridor ──
-// Runs along US-1 / Federal Highway, EAST of I-95
+// South Florida section only — WPB to Hialeah Yard
+// North section omitted as trains only interpolate within this range
 const fecPts = [
-  // ── NORTH: Jacksonville to Jupiter (coastal route) ──
-  [30.332,-81.617],[30.312,-81.598],[30.285,-81.574],
-  [30.258,-81.540],[30.230,-81.510],
-  [30.163,-81.433],[30.085,-81.392],
-  [29.993,-81.352],[29.930,-81.330],
-  [29.840,-81.290],[29.760,-81.260],
-  [29.690,-81.235],[29.625,-81.215],[29.560,-81.192],
-  [29.420,-81.043],[29.368,-81.012],[29.318,-80.998],
-  [29.025,-80.942],
-  [28.870,-80.900],[28.780,-80.870],
-  [28.614,-80.820],[28.555,-80.808],
-  [28.385,-80.742],[28.338,-80.730],[28.290,-80.720],
-  [28.100,-80.645],[28.060,-80.630],
-  [27.980,-80.610],[27.890,-80.580],
-  [27.815,-80.553],[27.720,-80.480],
-  [27.638,-80.418],[27.590,-80.395],
-  [27.448,-80.330],[27.408,-80.310],
-  [27.290,-80.270],[27.196,-80.248],[27.145,-80.232],
-  [27.062,-80.128],[26.985,-80.100],[26.942,-80.090],
-  [26.898,-80.082],[26.858,-80.070],
-  // ── SOUTH FL: crossing-to-crossing along US-1/Federal Hwy ──
+  // ── WPB to Boca (US-1 corridor, east of I-95) ──
   [26.7130,-80.0535],  // ★ Brightline WPB station
   [26.6928,-80.0548],  // Belvedere Rd
   [26.6772,-80.0562],  // Southern Blvd
@@ -751,14 +720,18 @@ const fecPts = [
   [26.0330,-80.1060],  // Hallandale Beach Blvd FEC
   [26.0060,-80.1078],  // NW 199th St FEC
   [25.9820,-80.1095],  // Ives Dairy Rd FEC
-  [25.9580,-80.1110],  // Aventura / NE 203rd
-  [25.9380,-80.1125],  // NE 185th St
-  [25.9180,-80.1140],  // Little River / NE 167th
-  [25.9000,-80.1160],  // NW 103rd St
-  [25.8780,-80.1250],  // curve toward Hialeah
-  [25.8600,-80.1480],  // NW 74th St
-  [25.8480,-80.1850],  // Hialeah Yard approach
-  [25.8450,-80.2130],  // ★ Hialeah Yard terminus
+  [25.9580,-80.1110],  // Aventura / NE 203rd — FEC turns inland here
+  [25.9420,-80.1310],  // NE 195th St — track curves west away from coast
+  [25.9250,-80.1520],  // NE 183rd St / North Miami Beach
+  [25.9100,-80.1680],  // NE 167th St — running through North Miami
+  [25.8950,-80.1810],  // NE 151st St / North Miami
+  [25.8800,-80.1870],  // NE 135th St
+  [25.8650,-80.1900],  // NE 123rd St / Little River
+  [25.8500,-80.1930],  // NE 111th St
+  [25.8350,-80.1960],  // NE 95th St / Miami Shores
+  [25.8200,-80.1990],  // NE 79th St — approaches Hialeah Yard area
+  [25.8050,-80.2050],  // NE 61st St
+  [25.7950,-80.2130],  // ★ Hialeah Yard / Little River terminus
 ];
 
 // ══════════════════════════════════════════════════════════
@@ -797,31 +770,15 @@ const ormLayer = L.tileLayer(
 );
 ormLayer.addTo(map);
 
-// Thin colored highlight lines so users can identify which corridor is which:
-// Yellow = SFRC (CSX/Tri-Rail)   Orange = FEC/Brightline
-// These are semi-transparent so the ORM detail shows through
-const sfrcHighlight = L.polyline(csxPts, {
-  color: "#ffe066", weight: 4, opacity: 0.55,
-  interactive: false, pane: "shadowPane"
-}).addTo(map);
-const fecHighlight = L.polyline(fecPts, {
-  color: "#ff8c00", weight: 4, opacity: 0.55,
-  interactive: false, pane: "shadowPane"
-}).addTo(map);
-
 let ormEnabled = true;
 function toggleOrmLayer() {
   ormEnabled = !ormEnabled;
   const btn = document.getElementById("btnTrack");
   if (ormEnabled) {
     ormLayer.addTo(map);
-    sfrcHighlight.addTo(map);
-    fecHighlight.addTo(map);
     if (btn) { btn.style.borderColor = "#00d4ff"; btn.style.color = "#00d4ff"; btn.textContent = "🛤 TRACK"; }
   } else {
     map.removeLayer(ormLayer);
-    map.removeLayer(sfrcHighlight);
-    map.removeLayer(fecHighlight);
     if (btn) { btn.style.borderColor = "#334"; btn.style.color = "#888"; btn.textContent = "🛤 OFF"; }
   }
 }
