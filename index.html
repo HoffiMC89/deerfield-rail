@@ -1650,61 +1650,45 @@ function render() {
 
 // ── List ↔ Map cross-linking ───────────────────────────────
 let selectedId = null;
+
 function selectTrain(id) {
-  // Deselect previous
-  if (selectedId) {
-    const prev = document.getElementById("row-"+selectedId);
-    if (prev) prev.classList.remove("selected");
-  }
-  // Toggle off if tapping same train
+  // Toggle off same train
   if (selectedId === id) {
-    selectedId = null;
+    if (markers[id]) markers[id].closePopup();
+    unhighlightRow(id);
     return;
   }
-  selectedId = id;
-  // Highlight list row and scroll to it
-  const row = document.getElementById("row-"+id);
-  if (row) {
-    row.classList.add("selected");
-    row.scrollIntoView({block:"nearest", behavior:"smooth"});
-  }
-  // Pan map to train and open popup
+  // Close previous popup
+  if (selectedId && markers[selectedId]) markers[selectedId].closePopup();
+
+  highlightRow(id);
+
   if (markers[id]) {
-    const latlng = markers[id].getLatLng();
-    map.panTo(latlng, {animate:true, duration:0.4});
-    setTimeout(() => {
-      if (markers[id]) {
-        markers[id].openPopup();
-      }
-    }, 450);
+    // Pan to marker then open popup
+    map.panTo(markers[id].getLatLng(), {animate:true, duration:0.35});
+    setTimeout(() => { if (markers[id]) markers[id].openPopup(); }, 380);
   }
 }
 
-// ── List row tap — unified handler for mobile + desktop ────
-// Uses both click and touchend to ensure it works everywhere
-let _lastTouch = null;
-document.getElementById("listscroll").addEventListener("touchstart", function(e) {
-  const row = e.target.closest("[data-trainid]");
-  _lastTouch = row ? row.dataset.trainid : null;
+// ── List row interactions — simple and bulletproof ─────────
+// Single unified pointer handler works on ALL devices (mouse, touch, stylus)
+let _pointerDownY = 0;
+document.getElementById("listscroll").addEventListener("pointerdown", function(e) {
+  _pointerDownY = e.clientY;
 }, {passive: true});
 
-document.getElementById("listscroll").addEventListener("touchend", function(e) {
-  const row = e.target.closest("[data-trainid]");
-  if (!row) return;
-  // Only fire if it was a tap (not a scroll)
-  if (_lastTouch === row.dataset.trainid) {
-    e.preventDefault();
-    selectTrain(row.dataset.trainid);
-  }
-  _lastTouch = null;
-}, {passive: false});
-
-document.getElementById("listscroll").addEventListener("click", function(e) {
-  // On desktop (no touch), handle click normally
-  if (_lastTouch !== null) return; // already handled by touchend
+document.getElementById("listscroll").addEventListener("pointerup", function(e) {
+  if (e.button > 0) return;
+  // Ignore if user scrolled more than 8px (it was a scroll not a tap)
+  if (Math.abs(e.clientY - _pointerDownY) > 8) return;
   const row = e.target.closest("[data-trainid]");
   if (!row) return;
   selectTrain(row.dataset.trainid);
+});
+
+// Prevent ghost clicks on mobile
+document.getElementById("listscroll").addEventListener("click", function(e) {
+  e.stopPropagation();
 });
 
 requestAnimationFrame(render);
