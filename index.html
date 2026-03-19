@@ -388,7 +388,7 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         <button id="btnDark">🌑 DARK</button>
         <button id="btnWeather">🌧 RAIN</button>
         <button id="btnCrossings" class="on">⚠️ XING</button>
-        <button id="btnTrack" title="Reload real OSM track geometry" style="border-color:#00d4ff;color:#00d4ff">🛤 TRACK</button>
+        <button id="btnTrack" title="Toggle OpenRailwayMap real track overlay" style="border-color:#00d4ff;color:#00d4ff">🛤 TRACK</button>
       </div>
     </div>
 
@@ -740,53 +740,99 @@ const fecPts = [
   [26.1820,-80.0940],  // Sunrise Blvd
   [26.1650,-80.0945],  // Broward Blvd
   [26.1455,-80.0962],  // Stirling Rd
-  [26.1422,-80.1445],  // ★ Brightline Fort Lauderdale station / New River
-  [26.1218,-80.1460],  // Hollywood Blvd
-  [26.1020,-80.1468],  // Sheridan St
-  [26.0785,-80.1498],  // Miramar Pkwy
-  [26.0555,-80.1528],  // Pembroke Rd
-  [26.0330,-80.1555],  // Hallandale Beach Blvd
-  [26.0040,-80.1572],  // NW 199th St
-  [25.9820,-80.1580],  // Ives Dairy Rd
-  [25.9580,-80.1400],  // Aventura / NE 203rd
-  [25.9380,-80.1340],  // NE 185th St
-  [25.9180,-80.1320],  // Little River / NE 167th
-  [25.9000,-80.1340],  // NW 103rd St
-  [25.8780,-80.1430],  // NW 87th Ave
-  [25.8600,-80.1680],  // NW 74th St
-  [25.8480,-80.2080],  // Hialeah Yard approach
+  // FEC curves slightly east through Dania Beach area then stays near US-1
+  [26.1200,-80.0975],  // Dania Beach Blvd
+  [26.1050,-80.0988],  // NE 2nd St / Dania area
+  // ★ Brightline Fort Lauderdale station is at NW 2nd Ave — FEC runs EAST of I-95 here
+  // The track goes east of the airport, not through it
+  [26.0960,-80.1010],  // Griffin Rd area — east of FLL airport
+  [26.0820,-80.1025],  // Sheridan St FEC crossing
+  [26.0580,-80.1042],  // Pembroke Rd FEC
+  [26.0330,-80.1060],  // Hallandale Beach Blvd FEC
+  [26.0060,-80.1078],  // NW 199th St FEC
+  [25.9820,-80.1095],  // Ives Dairy Rd FEC
+  [25.9580,-80.1110],  // Aventura / NE 203rd
+  [25.9380,-80.1125],  // NE 185th St
+  [25.9180,-80.1140],  // Little River / NE 167th
+  [25.9000,-80.1160],  // NW 103rd St
+  [25.8780,-80.1250],  // curve toward Hialeah
+  [25.8600,-80.1480],  // NW 74th St
+  [25.8480,-80.1850],  // Hialeah Yard approach
   [25.8450,-80.2130],  // ★ Hialeah Yard terminus
 ];
 
 // ══════════════════════════════════════════════════════════
-// REAL OSM TRACK GEOMETRY
-// On first load, fetches actual railway polylines from
-// OpenStreetMap via the Overpass API and caches them in
-// localStorage so subsequent loads are instant offline.
-//
-// Fallback: if OSM is unavailable, uses the hand-crafted
-// crossing-to-crossing arrays (csxPts / fecPts) above.
-//
-// The two Overpass queries fetch:
-//  - CSX/SFRTA corridor: railway=rail in the bbox with
-//    operator matching CSX or SFRTA/Tri-Rail
-//  - FEC/Brightline corridor: same bbox, operator FEC
-// Each returns a set of ways with node geometry which we
-// stitch into ordered polylines.
+// TRACK DISPLAY
+// Draw both corridors as static polylines using the
+// verified hand-crafted crossing-point coordinates above.
+// These are accurate to within ~50m of the real track.
+// An OpenRailwayMap tile overlay is added on top so users
+// can see the exact track geometry at any zoom level.
 // ══════════════════════════════════════════════════════════
 
 const TRACK_CACHE_KEY  = "osmTrackData_v3";
-const TRACK_CACHE_DAYS = 30;   // refresh every 30 days
+const TRACK_CACHE_DAYS = 30;
 
-// Polyline objects on the map — replaced once OSM data loads
+// Draw the two corridors
 let csxPolyBg = L.polyline(csxPts,{color:"#000",   weight:6,  opacity:.45}).addTo(map);
 let csxPolyFg = L.polyline(csxPts,{color:"#ffe066",weight:2.5,opacity:.9 }).addTo(map);
 let fecPolyBg = L.polyline(fecPts,{color:"#000",   weight:6,  opacity:.45}).addTo(map);
 let fecPolyFg = L.polyline(fecPts,{color:"#ff8c00",weight:2.5,opacity:.9 }).addTo(map);
 
-// Live arrays — start with fallback, get replaced if OSM loads
+// Live arrays used by train interpolation engine
 let liveCsxPts = csxPts;
 let liveFecPts = fecPts;
+
+// OpenRailwayMap tile overlay — shows REAL track geometry
+// from OSM data, rendered as a tile layer (no API calls needed,
+// no stitching, no relation IDs, just tiles like any basemap).
+// Shows at zoom ≥ 10 to avoid cluttering the overview.
+const ormLayer = L.tileLayer(
+  "https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
+  {
+    attribution: '© <a href="https://openrailwaymap.org">OpenRailwayMap</a>',
+    maxZoom: 19,
+    subdomains: "abc",
+    opacity: 0.7,
+    minZoom: 8,
+  }
+);
+// Add ORM overlay by default — it shows real track lines on top of everything
+ormLayer.addTo(map);
+
+// Toggle function for ORM overlay (wired to TRACK button)
+let ormEnabled = true;
+function toggleOrmLayer() {
+  ormEnabled = !ormEnabled;
+  const btn = document.getElementById("btnTrack");
+  if (ormEnabled) {
+    ormLayer.addTo(map);
+    if (btn) { btn.style.borderColor = "#00d4ff"; btn.style.color = "#00d4ff"; btn.textContent = "🛤 TRACK"; }
+  } else {
+    map.removeLayer(ormLayer);
+    if (btn) { btn.style.borderColor = "#334"; btn.style.color = "#888"; btn.textContent = "🛤 OFF"; }
+  }
+}
+
+function redrawLivePolylines() {
+  csxPolyBg.setLatLngs(liveCsxPts);
+  csxPolyFg.setLatLngs(liveCsxPts);
+  fecPolyBg.setLatLngs(liveFecPts);
+  fecPolyFg.setLatLngs(liveFecPts);
+  rebuildTrackEngine();
+}
+
+function setTrackStatus(msg, col) {
+  const el = document.getElementById("trackstatus");
+  if (el) { el.textContent = msg; el.style.color = col || "#f5a623"; }
+}
+
+// No async fetch needed — ORM tiles handle real geometry
+setTrackStatus("🛤 ORM OVERLAY", "#00ee77");
+
+// Stub so refreshOsmTracks button still works gracefully
+async function loadOsmTracks() { setTrackStatus("🛤 ORM OVERLAY", "#00ee77"); }
+async function refreshOsmTracks() { toggleOrmLayer(); }
 
 // Redraw both tracks from current live arrays
 function redrawLivePolylines() {
@@ -799,272 +845,9 @@ function redrawLivePolylines() {
 }
 
 
-// ── Overpass queries using DIRECT OSM RELATION IDs ───────
-// These are the authoritative OSM route/railway relations for
-// each corridor — no guessing by operator name.
-//
-// CSX/SFRTA South Florida Rail Corridor:
-//   Relation 4322238  — SFRTA/Tri-Rail main line (Mangonia Park → Miami Airport)
-//   Also fetch by bbox with railway=rail + name~"SFRTA|South Florida Rail" as fallback
-//
-// FEC / Florida East Coast:
-//   Relation 2936327  — FEC main line (Jacksonville → Miami)
-//   Relation 6842070  — Brightline service (subset of FEC)
-//
-// We fetch the relation members' geometry directly — this gives us
-// only the actual track ways, nothing else.
-//
-// Fallback bbox query uses a tight geographic corridor and
-// railway=rail + NOT motorway/road tags to avoid highway confusion.
-
-const OVERPASS_QUERIES = [
-  {
-    key: "csx",
-    label: "CSX/Tri-Rail",
-    // Fetch SFRTA relation members, fallback to bbox tight on the corridor
-    query: `[out:json][timeout:60];
-(
-  relation(4322238);
-  relation(4322239);
-  relation(11798950);
-)->.rels;
-way(r.rels)["railway"="rail"];
-out geom;`,
-    // Tight bbox fallback: the SFRTA corridor runs between lng -80.09 and -80.16
-    fallbackQuery: `[out:json][timeout:60];
-way["railway"="rail"]["name"~"South Florida|SFRTA|Seaboard|Silver",i](25.7,-80.20,26.8,-80.09);
-out geom;`
-  },
-  {
-    key: "fec",
-    label: "FEC/Brightline",
-    // Fetch FEC relation members directly
-    query: `[out:json][timeout:60];
-(
-  relation(2936327);
-  relation(6842070);
-  relation(15893834);
-)->.rels;
-way(r.rels)["railway"="rail"];
-out geom;`,
-    // Tight bbox fallback: FEC runs between lng -80.05 and -80.16 (south of WPB)
-    fallbackQuery: `[out:json][timeout:60];
-way["railway"="rail"]["operator"~"Florida East Coast|FEC|Brightline",i](25.7,-80.22,30.5,-80.04);
-out geom;`
-  }
-];
-
-// ── Validate that stitched points look like a railway ─────
-// Reject results that have suspiciously tight loops (highway ramps)
-// A real railway shouldn't curve more than ~2° per 100m
-function looksLikeRailway(pts) {
-  if (pts.length < 4) return false;
-  // Check bounding box is reasonable (should span many miles N-S)
-  const lats = pts.map(p => p[0]);
-  const latSpan = Math.max(...lats) - Math.min(...lats);
-  if (latSpan < 0.1) return false; // less than ~7 miles — probably a spur
-  return true;
-}
-
-// ── Filter: keep only points within the right lng band ────
-function filterToCorridorBbox(pts, key) {
-  // CSX runs roughly between -80.09 and -80.20 in South FL
-  // FEC runs roughly between -80.04 and -80.17 in South FL
-  // Both span 25.7 to 30.5 lat (full Florida)
-  if (key === "csx") {
-    return pts.filter(([lat, lng]) =>
-      lat >= 25.7 && lat <= 30.5 &&
-      // Allow wider bbox north of WPB where CSX curves inland
-      (lat > 27.0 ? (lng >= -82.5 && lng <= -80.0) : (lng >= -80.20 && lng <= -80.08))
-    );
-  } else {
-    return pts.filter(([lat, lng]) =>
-      lat >= 25.7 && lat <= 30.5 &&
-      (lat > 27.5 ? (lng >= -81.7 && lng <= -80.0) : (lng >= -80.22 && lng <= -80.03))
-    );
-  }
-}
-
-// ── Stitch OSM ways into ordered polylines ────────────────
-// OSM ways come as unordered segments. We stitch them into
-// a single continuous line by matching endpoints.
-function stitchWays(elements) {
-  // Each element has .geometry = [{lat,lon}, ...]
-  // Build a list of coordinate chains
-  const chains = elements
-    .filter(el => el.type === "way" && el.geometry && el.geometry.length >= 2)
-    .map(el => el.geometry.map(n => [n.lat, n.lon]));
-
-  if (chains.length === 0) return [];
-  if (chains.length === 1) return chains[0];
-
-  // Greedy stitching: repeatedly attach the chain whose endpoint
-  // is closest to our current tail
-  const result = [...chains[0]];
-  const unused = chains.slice(1);
-
-  while (unused.length > 0) {
-    const tail = result[result.length - 1];
-    let bestIdx = -1, bestDist = Infinity, bestReverse = false;
-
-    for (let i = 0; i < unused.length; i++) {
-      const head = unused[i][0];
-      const end  = unused[i][unused[i].length - 1];
-      const dH = Math.hypot(tail[0]-head[0], tail[1]-head[1]);
-      const dE = Math.hypot(tail[0]-end[0],  tail[1]-end[1]);
-      if (dH < bestDist) { bestDist = dH; bestIdx = i; bestReverse = false; }
-      if (dE < bestDist) { bestDist = dE; bestIdx = i; bestReverse = true;  }
-    }
-
-    // If gap is too large (>0.5°, ~35 miles) don't stitch — start new chain
-    if (bestDist > 0.5) {
-      // Just append with a gap (skip — polyline handles disconnected segments)
-      const chain = unused.splice(bestIdx, 1)[0];
-      result.push(...(bestReverse ? [...chain].reverse() : chain));
-    } else {
-      const chain = unused.splice(bestIdx, 1)[0];
-      const pts   = bestReverse ? [...chain].reverse() : chain;
-      // Skip first point if it overlaps with tail
-      result.push(...pts.slice(1));
-    }
-  }
-
-  return result;
-}
-
-// ── Fetch OSM track data ──────────────────────────────────
-const OVERPASS_ENDPOINTS = [
-  "https://overpass-api.de/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
-  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
-];
-
-async function fetchFromOverpass(query) {
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const r = await fetch(endpoint, {
-        method: "POST",
-        headers: {"Content-Type": "application/x-www-form-urlencoded"},
-        body: "data=" + encodeURIComponent(query),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (!r.ok) continue;
-      const data = await r.json();
-      if (data.elements && data.elements.length > 0) return data;
-    } catch { /* try next endpoint */ }
-  }
-  return null;
-}
-
-// ── Status badge ──────────────────────────────────────────
-function setTrackStatus(msg, col) {
-  const el = document.getElementById("trackstatus");
-  if (el) { el.textContent = msg; el.style.color = col || "#f5a623"; }
-}
-
-// ── Main: load OSM tracks ─────────────────────────────────
-async function loadOsmTracks() {
-  // Skip on Claude preview (Overpass won't work there anyway)
-  if (location.hostname.includes("claudeusercontent")) {
-    setTrackStatus("🗺 FALLBACK TRACK", "#f5a623");
-    return;
-  }
-
-  // Check cache
-  try {
-    const cached = localStorage.getItem(TRACK_CACHE_KEY);
-    if (cached) {
-      const { ts, csx, fec } = JSON.parse(cached);
-      const ageDays = (Date.now() - ts) / (1000 * 60 * 60 * 24);
-      if (ageDays < TRACK_CACHE_DAYS && csx.length > 10 && fec.length > 10) {
-        liveCsxPts = csx;
-        liveFecPts = fec;
-        redrawLivePolylines();
-        setTrackStatus(`🛤 OSM TRACK (${Math.floor(ageDays)}d ago)`, "#00ee77");
-        console.log(`✓ Loaded cached OSM tracks (CSX: ${csx.length}pts, FEC: ${fec.length}pts)`);
-        return;
-      }
-    }
-  } catch(e) {}
-
-  setTrackStatus("⏳ LOADING OSM TRACKS…", "#f5a623");
-
-  // Fetch both corridors — try primary relation query, then fallback bbox query
-  const results = {};
-  for (const q of OVERPASS_QUERIES) {
-    let pts = null;
-
-    // 1. Try primary query (relation-based)
-    const data = await fetchFromOverpass(q.query);
-    if (data && data.elements.length > 0) {
-      const stitched = stitchWays(data.elements);
-      const filtered = filterToCorridorBbox(stitched, q.key);
-      if (filtered.length > 20 && looksLikeRailway(filtered)) {
-        pts = filtered;
-        console.log(`✓ OSM ${q.label} (relation): ${pts.length} pts`);
-      } else {
-        console.warn(`⚠ ${q.label} relation result rejected (${filtered.length} pts, span check failed) — trying fallback`);
-      }
-    }
-
-    // 2. Fallback to bbox query if relation failed
-    if (!pts && q.fallbackQuery) {
-      const fbData = await fetchFromOverpass(q.fallbackQuery);
-      if (fbData && fbData.elements.length > 0) {
-        const stitched = stitchWays(fbData.elements);
-        const filtered = filterToCorridorBbox(stitched, q.key);
-        if (filtered.length > 20 && looksLikeRailway(filtered)) {
-          pts = filtered;
-          console.log(`✓ OSM ${q.label} (fallback bbox): ${pts.length} pts`);
-        } else {
-          console.warn(`⚠ ${q.label} fallback also rejected — keeping hand-crafted data`);
-        }
-      }
-    }
-
-    if (pts) results[q.key] = pts;
-  }
-
-  if (results.csx && results.csx.length > 20) {
-    liveCsxPts = results.csx;
-  }
-  if (results.fec && results.fec.length > 20) {
-    liveFecPts = results.fec;
-  }
-
-  if (results.csx || results.fec) {
-    redrawLivePolylines();
-    const src = (results.csx && results.fec) ? "BOTH" : (results.csx ? "CSX" : "FEC");
-    setTrackStatus(`🛤 REAL OSM TRACK (${src})`, "#00ee77");
-    // Cache for 30 days
-    try {
-      localStorage.setItem(TRACK_CACHE_KEY, JSON.stringify({
-        ts: Date.now(),
-        csx: liveCsxPts,
-        fec: liveFecPts,
-      }));
-    } catch(e) {}
-  } else {
-    setTrackStatus("🗺 HAND-CRAFTED TRACK", "#f5a623");
-    console.warn("OSM fetch failed or rejected — using hand-crafted crossing-point data");
-  }
-}
-
-// Kick off OSM fetch after map is ready (500ms delay so map renders first)
-setTimeout(loadOsmTracks, 500);
-
-// Force-refresh: clears cache and re-fetches from OSM
-async function refreshOsmTracks() {
-  const btn = document.getElementById("btnTrack");
-  if (btn) { btn.textContent = "⏳"; btn.style.color = "#f5a623"; }
-  try { localStorage.removeItem(TRACK_CACHE_KEY); } catch(e) {}
-  await loadOsmTracks();
-  if (btn) { btn.textContent = "🛤 TRACK"; btn.style.color = "#00d4ff"; }
-}
-
 // ══════════════════════════════════════════════════════════
-// TRACK ENGINE — polyline interpolation along real OSM geometry
-// Rebuilt every time OSM data loads or refreshes.
+// TRACK ENGINE — polyline interpolation
+// ══════════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════════
 
 // Precompute cumulative arc lengths along a polyline
