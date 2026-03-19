@@ -17,7 +17,7 @@
 <script>
 // ── Password gate — runs before anything else loads ──
 (function() {
-  const PASS = "rail123";
+  const PASS = "train123";
   const KEY  = "rail_auth";
   // Already authenticated this session?
   if (sessionStorage.getItem(KEY) === "1") return;
@@ -49,43 +49,201 @@
 </script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <style>
+/* ═══════════════════════════════════════════════════════
+   DEERFIELD RAIL TRACKER — Layout CSS
+   MOBILE  : stacked, compact, iPhone-first  (< 900px)
+   DESKTOP : map 65% left / panel 35% right  (≥ 900px)
+   These two are COMPLETELY SEPARATE — no shared overrides
+   ═══════════════════════════════════════════════════════ */
+
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;font-family:'Courier New',monospace;background:#060a14;color:#c8d6e5;overflow:hidden}
-#app{display:flex;flex-direction:column;height:100dvh;max-width:100%;margin:0 auto}
+#app{display:flex;flex-direction:column;height:100dvh}
 
-/* ── HEADER — compact single row ── */
-#hdr{background:#0b1020;border-bottom:1px solid #18243a;padding:5px 8px;
-  flex-shrink:0;display:flex;align-items:center;gap:6px;min-height:44px;overflow:hidden}
-.hlogo{display:flex;flex-direction:column;flex-shrink:0;min-width:0}
-.htitle{font-size:11px;font-weight:bold;color:#fff;letter-spacing:1px;white-space:nowrap}
-.hsub{font-size:6px;color:#2a3a50;letter-spacing:0px;white-space:nowrap}
-#clock{font-size:16px;color:#f5a623;letter-spacing:2px;white-space:nowrap;
-  text-shadow:0 0 10px rgba(245,166,35,.5);flex:1;text-align:center;min-width:0}
-.hbtns{display:flex;align-items:center;gap:3px;flex-shrink:0}
-button{border:1px solid #2a3a50;background:#182030;color:#c8d6e5;padding:4px 7px;
-  border-radius:5px;cursor:pointer;font-size:9px;font-family:monospace;letter-spacing:0px;
-  touch-action:manipulation;user-select:none;min-height:30px;min-width:28px}
+/* ── Shared colours & components (no sizing here) ── */
+button{border:1px solid #2a3a50;background:#182030;color:#c8d6e5;border-radius:5px;
+  cursor:pointer;font-family:monospace;touch-action:manipulation;user-select:none}
 button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
-#liveBtn{border-color:#00ee77;color:#00ee77;font-size:11px;padding:4px 6px}
+#liveBtn{border-color:#00ee77;color:#00ee77}
 #liveBtn.on{background:#00ee77;color:#000;border-color:#00ee77}
-#s60,#s300{font-size:9px;padding:4px 6px}
-#modeBtn{border-color:#a78bfa;color:#a78bfa;font-size:9px;padding:4px 6px}
+#modeBtn{border-color:#a78bfa;color:#a78bfa}
 #modeBtn.on{background:#a78bfa;color:#000}
-#liveindicator{font-size:9px;flex-shrink:0}
-
-/* ── BODY ── */
-#body{display:flex;flex:1;overflow:hidden;flex-direction:column;min-height:0}
-#body.desktop{flex-direction:row}
-
-/* ── MAP ── */
+#clock{color:#f5a623;white-space:nowrap;letter-spacing:2px;
+  text-shadow:0 0 10px rgba(245,166,35,.5);flex:1;text-align:center;min-width:0}
+#hdr{background:#0b1020;border-bottom:1px solid #18243a;flex-shrink:0;
+  display:flex;align-items:center;overflow:hidden}
+.hlogo{display:flex;flex-direction:column;flex-shrink:0;min-width:0}
+.hbtns{display:flex;align-items:center;flex-shrink:0}
+#liveindicator{white-space:nowrap;flex-shrink:0}
+.isLive{color:#00ee77}.isSim{color:#f5a623}
 #mapwrap{position:relative;flex-shrink:0}
-/* MOBILE: map = fixed height that works on all iPhones */
-#body:not(.desktop) #mapwrap{width:100%}
-#body:not(.desktop) #map{height:220px}
-/* DESKTOP: map fills left column — 65% for bigger map */
-#body.desktop #mapwrap{width:65%;height:100%;flex-shrink:0}
-#body.desktop #map{height:100%}
 #map{width:100%}
+#mapcorner{position:absolute;top:5px;left:5px;z-index:1000;background:rgba(5,8,18,.9);
+  border:1px solid #18243a;border-radius:5px;letter-spacing:1px;color:#3a5060;
+  pointer-events:none;line-height:1.6}
+#mapcorner b{color:#f5a623}
+#apistatus{position:absolute;top:5px;right:5px;z-index:1000;background:rgba(5,8,18,.9);
+  border:1px solid #18243a;border-radius:5px;letter-spacing:1px;pointer-events:none;color:#f5a623}
+#layertoggle{position:absolute;bottom:20px;right:5px;z-index:1000;display:flex;flex-direction:column;gap:3px}
+#layertoggle button{background:rgba(5,8,18,.92);border:1px solid #334;color:#aaa;border-radius:4px}
+#layertoggle button.on{border-color:#f5a623;color:#f5a623;background:#182030}
+.you-ring{width:18px;height:18px;border-radius:50%;background:rgba(0,238,119,.2);
+  display:flex;align-items:center;justify-content:center;animation:youPulse 2s infinite}
+.you-dot{width:11px;height:11px;border-radius:50%;background:#00ee77;border:2px solid #fff;box-shadow:0 0 10px #00ee7788}
+@keyframes youPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,238,119,.4)}50%{box-shadow:0 0 0 6px rgba(0,238,119,0)}}
+#panel{display:flex;flex-direction:column;overflow:hidden}
+#nextbanner{background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.13);border-radius:7px;flex-shrink:0}
+.nlabel{letter-spacing:1px;color:#00d4ff}
+.nrow{display:flex;align-items:center;gap:8px}
+#ntime{color:#fff;font-weight:bold;line-height:1;flex-shrink:0}
+.ninfo{flex:1;min-width:0;overflow:hidden}
+#ntrain{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nmeta{color:#2a3a50}
+#ncd{color:#f5a623;font-weight:bold;flex-shrink:0}
+#otbar{background:rgba(255,140,0,.05);border:1px solid rgba(255,140,0,.17);
+  border-radius:5px;flex-shrink:0;display:none}
+.otlabel{color:#ff8c00;letter-spacing:1px}
+#otchips{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.chip{font-size:7px;padding:1px 4px;border-radius:3px;border:1px solid;white-space:nowrap}
+#filters{display:flex;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#filters::-webkit-scrollbar{display:none}
+#filters button{border:1px solid #18243a;background:transparent;color:#3a5060;
+  border-radius:20px;white-space:nowrap;flex-shrink:0}
+#filters button.on{background:#182a40;border-color:#00d4ff;color:#00d4ff}
+#listscroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
+#listscroll::-webkit-scrollbar{width:3px}
+#listscroll::-webkit-scrollbar-thumb{background:#18243a;border-radius:2px}
+.sec{letter-spacing:2px;color:#2a3a50}
+.trow{display:flex;align-items:center;border-radius:8px;border:1px solid transparent;
+  cursor:pointer;transition:background .15s;overflow:hidden}
+.trow:active{background:rgba(255,255,255,.05)!important}
+.trow.selected{outline:2px solid #f5a623;background:rgba(245,166,35,.07)!important}
+.op-logo{object-fit:contain;border-radius:4px;background:rgba(255,255,255,.08);
+  flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
+.op-logo-err{display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ttime{color:#fff;flex-shrink:0;font-weight:bold}
+.tinfo{flex:1;min-width:0;overflow:hidden}
+.tname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tmeta{color:#2a3a50;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cargo-tag{color:#ffb347;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
+.tbadge{border-radius:3px;flex-shrink:0;white-space:nowrap}
+.prow{display:flex;align-items:center;opacity:.3}
+.pdot{width:5px;height:5px;border-radius:50%;background:#2a3a50;flex-shrink:0}
+.ptime{color:#6a8090;flex-shrink:0}
+.pname{color:#3a5060;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pdir{color:#2a3a50}
+#panelFooter{border-top:1px solid #18243a;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.spd-badge{font-size:7px;font-weight:bold;background:rgba(0,0,0,.7);color:#fff;padding:1px 3px;border-radius:2px}
+#btnWeather{background:rgba(5,8,18,.9);border:1px solid #334;color:#aaa;border-radius:4px}
+#btnWeather.on{border-color:#60a5fa;color:#60a5fa;background:#0d1a2e}
+
+/* ══════════════════════════════════════
+   MOBILE ONLY  (max-width: 899px)
+   iPhone 13 Pro Max and smaller
+   ══════════════════════════════════════ */
+@media(max-width:899px){
+  #hdr{padding:5px 8px;min-height:44px;gap:5px}
+  .htitle{font-size:11px;font-weight:bold;color:#fff;letter-spacing:1px;white-space:nowrap}
+  .hsub{font-size:6px;color:#2a3a50;white-space:nowrap}
+  #clock{font-size:16px}
+  .hbtns{gap:4px}
+  button{padding:4px 7px;font-size:9px;min-height:30px;min-width:28px}
+  #liveBtn{font-size:11px;padding:4px 8px}
+  #s60,#s300{font-size:9px}
+  #modeBtn{display:none}
+  #liveindicator{font-size:9px}
+  /* BODY: stacked column */
+  #body{display:flex;flex:1;overflow:hidden;flex-direction:column;min-height:0}
+  /* MAP: fixed 220px height */
+  #mapwrap{width:100%}
+  #map{height:220px}
+  #mapcorner{padding:3px 7px;font-size:6.5px}
+  #apistatus{padding:3px 7px;font-size:6.5px}
+  #layertoggle button{padding:3px 7px;font-size:8px;min-height:26px}
+  /* PANEL: fills remaining height */
+  #panel{flex:1;border-top:1px solid #18243a;min-height:0}
+  #nextbanner{margin:4px 8px 2px;padding:6px 10px}
+  .nlabel{font-size:7px;margin-bottom:1px}
+  #ntime{font-size:20px}
+  #ntrain{font-size:11px}
+  #nmeta{font-size:8px}
+  #ncd{font-size:13px}
+  #otbar{margin:0 8px 2px;padding:3px 10px}
+  .otlabel{font-size:7px}
+  #filters{padding:2px 8px;gap:3px}
+  #filters button{font-size:9px;padding:3px 10px;min-height:26px}
+  #listscroll{padding:2px 8px 8px}
+  .sec{font-size:7px;padding:4px 2px 2px}
+  .trow{gap:7px;padding:6px 8px;margin-bottom:3px}
+  .op-logo{width:56px;height:28px;padding:2px 4px}
+  .op-logo-err{width:56px;height:28px;font-size:18px}
+  .ttime{font-size:13px;min-width:40px}
+  .tname{font-size:11px}
+  .tmeta{font-size:8px}
+  .cargo-tag{font-size:7px}
+  .tbadge{font-size:7px;padding:2px 4px}
+  .prow{gap:8px;padding:3px 8px;margin-bottom:1px}
+  .ptime{font-size:10px;min-width:42px}
+  .pname{font-size:9px}
+  .pdir{font-size:9px}
+  #panelFooter{padding:3px 8px}
+  #panelFooter span{font-size:6px;color:#1a2a38;letter-spacing:1px}
+  #histBtn{padding:3px 8px;font-size:9px;min-height:24px}
+}
+
+/* ══════════════════════════════════════
+   DESKTOP ONLY  (min-width: 900px)
+   Full screen browser / tablet landscape
+   ══════════════════════════════════════ */
+@media(min-width:900px){
+  #hdr{padding:10px 24px;min-height:58px;gap:20px}
+  .htitle{font-size:18px;font-weight:bold;color:#fff;letter-spacing:4px;white-space:nowrap}
+  .hsub{font-size:8px;color:#2a3a50;white-space:nowrap}
+  #clock{font-size:28px;letter-spacing:5px}
+  .hbtns{gap:8px}
+  button{padding:8px 16px;font-size:12px;min-height:38px;min-width:38px}
+  #liveBtn{font-size:14px;padding:8px 14px}
+  #s60,#s300{font-size:12px}
+  #modeBtn{display:block;font-size:12px}
+  #liveindicator{font-size:11px}
+  /* BODY: side by side row */
+  #body{display:flex;flex:1;overflow:hidden;flex-direction:row;min-height:0}
+  /* MAP: 65% left, full height */
+  #mapwrap{width:65%;height:100%;flex-shrink:0}
+  #map{height:100%}
+  #mapcorner{padding:7px 14px;font-size:10px}
+  #apistatus{padding:7px 14px;font-size:10px}
+  #layertoggle button{padding:6px 14px;font-size:10px;min-height:34px}
+  /* PANEL: 35% right, full height, scrollable list */
+  #panel{flex:1;border-left:1px solid #18243a;border-top:none;min-height:0;overflow:hidden}
+  #nextbanner{margin:12px 16px 6px;padding:14px 18px}
+  .nlabel{font-size:9px;margin-bottom:5px}
+  #ntime{font-size:36px}
+  #ntrain{font-size:15px}
+  #nmeta{font-size:10px}
+  #ncd{font-size:20px}
+  #otbar{margin:0 16px 6px;padding:8px 16px}
+  .otlabel{font-size:9px}
+  #filters{padding:6px 16px;gap:8px}
+  #filters button{font-size:12px;padding:6px 16px;min-height:34px}
+  #listscroll{padding:4px 16px 16px}
+  .sec{font-size:10px;padding:10px 2px 5px}
+  .trow{gap:14px;padding:12px 16px;margin-bottom:5px}
+  .op-logo{width:88px;height:44px;padding:4px 6px}
+  .op-logo-err{width:88px;height:44px;font-size:28px}
+  .ttime{font-size:18px;min-width:58px}
+  .tname{font-size:14px}
+  .tmeta{font-size:11px}
+  .cargo-tag{font-size:10px}
+  .tbadge{font-size:9px;padding:4px 8px}
+  .prow{gap:12px;padding:6px 12px;margin-bottom:2px}
+  .ptime{font-size:13px;min-width:52px}
+  .pname{font-size:11px}
+  .pdir{font-size:11px}
+  #panelFooter{padding:8px 16px}
+  #panelFooter span{font-size:8px;color:#1a2a38;letter-spacing:1px}
+  #histBtn{padding:6px 14px;font-size:11px;min-height:30px}
+}
 
 /* map overlays */
 #mapcorner{position:absolute;top:5px;left:5px;z-index:1000;background:rgba(5,8,18,.9);
@@ -106,80 +264,6 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
 .you-dot{width:11px;height:11px;border-radius:50%;background:#00ee77;border:2px solid #fff;
   box-shadow:0 0 10px #00ee7788}
 @keyframes youPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,238,119,.4)}50%{box-shadow:0 0 0 6px rgba(0,238,119,0)}}
-
-/* ── PANEL ── */
-#panel{display:flex;flex-direction:column;flex:1;overflow:hidden;
-  border-top:1px solid #18243a;min-height:0}
-#body.desktop #panel{border-top:none;border-left:1px solid #18243a;
-  width:35%;flex-shrink:0}
-
-/* NEXT banner — compact on mobile */
-#nextbanner{margin:4px 8px 2px;padding:6px 10px;
-  background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.13);
-  border-radius:7px;flex-shrink:0}
-.nlabel{font-size:7px;letter-spacing:1px;color:#00d4ff;margin-bottom:1px}
-.nrow{display:flex;align-items:center;gap:8px}
-#ntime{font-size:22px;color:#fff;font-weight:bold;line-height:1;flex-shrink:0}
-.ninfo{flex:1;min-width:0;overflow:hidden}
-#ntrain{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#nmeta{font-size:8px;color:#2a3a50}
-#ncd{font-size:13px;color:#f5a623;font-weight:bold;flex-shrink:0}
-
-/* ON TRACK bar */
-#otbar{margin:0 8px 2px;padding:3px 10px;background:rgba(255,140,0,.05);
-  border:1px solid rgba(255,140,0,.17);border-radius:5px;flex-shrink:0;display:none}
-.otlabel{font-size:7px;color:#ff8c00;letter-spacing:1px}
-#otchips{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px}
-.chip{font-size:7px;padding:1px 4px;border-radius:3px;border:1px solid;white-space:nowrap}
-
-/* FILTER tabs */
-#filters{display:flex;gap:3px;padding:2px 8px;flex-shrink:0;overflow-x:auto;
-  -webkit-overflow-scrolling:touch;scrollbar-width:none}
-#filters::-webkit-scrollbar{display:none}
-#filters button{border:1px solid #18243a;background:transparent;color:#3a5060;
-  padding:3px 10px;border-radius:20px;font-size:9px;letter-spacing:1px;
-  white-space:nowrap;flex-shrink:0;min-height:26px}
-#filters button.on{background:#182a40;border-color:#00d4ff;color:#00d4ff}
-
-/* LIST */
-#listscroll{flex:1;overflow-y:auto;padding:2px 8px 8px;-webkit-overflow-scrolling:touch;min-height:0}
-#listscroll::-webkit-scrollbar{width:3px}
-#listscroll::-webkit-scrollbar-thumb{background:#18243a;border-radius:2px}
-.sec{font-size:7px;letter-spacing:2px;color:#2a3a50;padding:4px 2px 2px}
-
-/* Train row */
-.trow{display:flex;align-items:center;gap:7px;padding:6px 8px;margin-bottom:3px;
-  border-radius:8px;border:1px solid transparent;cursor:pointer;transition:background .15s;
-  overflow:hidden}
-.trow:active{background:rgba(255,255,255,.05)!important}
-.trow.selected{outline:2px solid #f5a623;background:rgba(245,166,35,.07)!important}
-/* Operator logo — slightly smaller for tight screens */
-.op-logo{width:56px;height:28px;object-fit:contain;border-radius:4px;
-  background:rgba(255,255,255,.08);flex-shrink:0;padding:2px 4px;
-  border:1px solid rgba(255,255,255,.1)}
-.op-logo-err{width:56px;height:28px;display:flex;align-items:center;justify-content:center;
-  font-size:18px;flex-shrink:0}
-.ttime{font-size:13px;color:#fff;min-width:40px;flex-shrink:0;font-weight:bold}
-.tinfo{flex:1;min-width:0;overflow:hidden}
-.tname{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tmeta{font-size:8px;color:#2a3a50;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cargo-tag{font-size:7px;color:#ffb347;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.85}
-.tbadge{font-size:7px;padding:2px 4px;border-radius:3px;flex-shrink:0;letter-spacing:0px;white-space:nowrap}
-
-/* Passed rows */
-.prow{display:flex;align-items:center;gap:8px;padding:4px 10px;opacity:.3;margin-bottom:1px}
-.pdot{width:5px;height:5px;border-radius:50%;background:#2a3a50;flex-shrink:0}
-.ptime{font-size:11px;color:#6a8090;min-width:44px}
-.pname{font-size:9px;color:#3a5060;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pdir{font-size:9px;color:#2a3a50}
-
-#footer{display:none}/* hidden on mobile to save space */
-#body.desktop~* #footer,
-#body.desktop #panel #footer{display:block;padding:4px 10px;border-top:1px solid #18243a;
-  font-size:6px;color:#1a2a38;letter-spacing:1px;flex-shrink:0;line-height:1.5}
-
-/* LIVE indicator dot */
-#liveindicator{font-size:7px;letter-spacing:1px;white-space:nowrap}
 .isLive{color:#00ee77}.isSim{color:#f5a623}
 
 /* ── FEATURE 8: Speed badge on map markers ── */
@@ -223,28 +307,6 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   padding:3px 7px;font-size:8px;border-radius:4px;min-height:26px}
 #btnWeather.on{border-color:#60a5fa;color:#60a5fa;background:#0d1a2e}
 
-/* ── DESKTOP overrides — larger text and buttons on wide screens ── */
-@media(min-width:900px){
-  .htitle{font-size:15px;letter-spacing:3px}
-  .hsub{font-size:7px}
-  #clock{font-size:22px;letter-spacing:3px}
-  button{padding:6px 12px;font-size:11px}
-  #liveBtn{font-size:13px}
-  #nextbanner{margin:8px 12px 4px;padding:10px 14px}
-  #ntime{font-size:28px}
-  #ntrain{font-size:13px}
-  #ncd{font-size:16px}
-  .trow{padding:9px 12px;gap:10px}
-  .op-logo{width:72px;height:36px}
-  .ttime{font-size:15px;min-width:48px}
-  .tname{font-size:12px}
-  .tmeta{font-size:9px}
-  .cargo-tag{font-size:8px}
-  #filters button{font-size:10px;padding:4px 12px}
-  .sec{font-size:8px}
-  #mapcorner{font-size:8px;padding:5px 10px}
-  #apistatus{font-size:8px;padding:5px 10px}
-}
 
 .leaflet-popup-content-wrapper{background:#0a0e1a!important;border:1px solid #1e2d4a!important;
   border-radius:8px!important;box-shadow:0 4px 20px rgba(0,0,0,.8)!important;color:#c8d6e5!important}
@@ -320,6 +382,7 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         <button id="btnOsm">🗺 OSM</button>
         <button id="btnDark">🌑 DARK</button>
         <button id="btnWeather">🌧 RAIN</button>
+        <button id="btnCrossings" class="on">⚠️ XING</button>
       </div>
     </div>
 
@@ -884,13 +947,16 @@ function putMarker(id, lat, lng, type, emoji, col, dir, isLive, popHtml, speed) 
       icon,
       zIndexOffset: isLive ? 1500 : 600,
     }).addTo(map);
+    // Click/tap on map marker → highlight row in list + open popup
+    markers[id].on("click", () => selectTrain(id));
   } else {
     markers[id].setLatLng([lat,lng]);
     markers[id].setIcon(icon);
   }
   markers[id].unbindPopup();
   markers[id].bindPopup(
-    `<div style="border-left:3px solid ${col};padding-left:8px">${popHtml}</div>`
+    `<div style="border-left:3px solid ${col};padding-left:8px">${popHtml}</div>`,
+    {autoPan: true, autoPanPaddingTopLeft: [20,20], autoPanPaddingBottomRight: [20,20]}
   );
 }
 
@@ -924,8 +990,28 @@ function toggleMode() {
     btn.textContent = "🖥";
     btn.classList.remove("on");
   }
-  setTimeout(()=>map.invalidateSize(), 50);
+  setTimeout(()=>map.invalidateSize(), 80);
 }
+
+// ── Auto-detect device type on load ───────────────────────
+// Use userAgent + screen width — works reliably for real devices
+// (not the iframe width which is unreliable in previews)
+(function autoDetectDevice() {
+  const ua = navigator.userAgent || "";
+  const isMobile = /iPhone|iPad|iPod|Android|Mobile|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  const isTabletLandscape = !isMobile && window.screen.width >= 900;
+  const isDesktop = !isMobile || isTabletLandscape;
+  if (isDesktop) {
+    // Auto-switch to desktop layout for non-mobile devices
+    desktopMode = true;
+    document.getElementById("body").classList.add("desktop");
+    const btn = document.getElementById("modeBtn");
+    btn.textContent = "📱";
+    btn.classList.add("on");
+    setTimeout(()=>map.invalidateSize(), 80);
+  }
+  console.log(`Device: ${isMobile?"MOBILE":"DESKTOP"} | UA: ${ua.substring(0,50)}`);
+})();
 // ── Locate / Center button ─────────────────────────────────
 document.getElementById("locateBtn").addEventListener("click", function() {
   const btn = this;
@@ -989,6 +1075,17 @@ document.getElementById("fFec").addEventListener("click",    function(){ setFilt
 document.getElementById("fCsx").addEventListener("click",    function(){ setFilter("csx",    this); });
 
 document.getElementById("btnWeather").addEventListener("click", toggleWeather);
+document.getElementById("btnCrossings").addEventListener("click", function() {
+  if (map.hasLayer(crossingLayer)) {
+    map.removeLayer(crossingLayer);
+    this.classList.remove("on");
+    this.textContent = "⚠️ XING";
+  } else {
+    crossingLayer.addTo(map);
+    this.classList.add("on");
+    this.textContent = "⚠️ XING ●";
+  }
+});
 document.getElementById("histBtn").addEventListener("click", () => {
   updateHistUI();
   document.getElementById("historyPanel").classList.add("open");
@@ -1155,7 +1252,96 @@ NOISE_ZONES.forEach(z => {
 });
 
 // ══════════════════════════════════════════════════════════
-// FEATURE 5 — WEATHER OVERLAY
+// RAILWAY CROSSINGS — from OpenStreetMap via Overpass API
+// Fetches all railway level crossings in Florida
+// Shows ⚠️ sign with road name + traffic data
+// ══════════════════════════════════════════════════════════
+const crossingLayer = L.layerGroup().addTo(map);
+
+const crossingIcon = L.divIcon({
+  html: `<div style="font-size:16px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));
+    cursor:pointer">⚠️</div>`,
+  className: "",
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
+async function loadCrossings() {
+  // Skip in Claude preview — Overpass API is blocked there
+  if (location.hostname.includes("claudeusercontent")) {
+    console.log("Crossings: skipped in preview, will load on GitHub Pages");
+    return;
+  }
+
+  const query = `
+    [out:json][timeout:30];
+    node["railway"="level_crossing"](25.7,-82.0,30.5,-80.0);
+    out body;
+  `;
+  const encoded = "data=" + encodeURIComponent(query);
+
+  // Try multiple Overpass mirrors in order
+  const mirrors = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+  ];
+
+  let data = null;
+  for (const url of mirrors) {
+    try {
+      const resp = await fetch(url, { method:"POST", body:encoded });
+      if (!resp.ok) continue;
+      data = await resp.json();
+      break;
+    } catch(e) {
+      console.warn(`Crossings mirror failed: ${url}`);
+    }
+  }
+
+  if (!data) {
+    console.warn("All Overpass mirrors failed — crossings unavailable");
+    return;
+  }
+
+    crossingLayer.clearLayers();
+
+    for (const node of data.elements) {
+      const lat = node.lat, lng = node.lon;
+      const tags = node.tags || {};
+
+      // Road info
+      const roadRef  = tags["ref"] || "";
+      const roadName = tags["name"] || tags["highway"] || "";
+      const crossing = tags["crossing"] || "";
+      const supervision = tags["crossing:supervision"] || "";
+      const bells    = tags["crossing:bell"] === "yes" ? "🔔 Bell" : "";
+      const lights   = tags["crossing:light"] === "yes" ? "🚦 Lights" : "";
+      const barriers = tags["crossing:barrier"] ? `🚧 ${tags["crossing:barrier"]}` : "";
+      const saltDot  = tags["railway:track_ref"] || tags["operator"] || "";
+
+      // Build popup
+      const roadLine = [roadRef, roadName].filter(Boolean).join(" — ") || "Unknown road";
+      const safety   = [barriers, lights, bells].filter(Boolean).join(" · ") || "⚠️ Uncontrolled";
+      const popHtml = `
+        <div style="font-size:8px;letter-spacing:1px;color:#f5a623;margin-bottom:3px">
+          ⚠️ RAILWAY CROSSING</div>
+        <b style="color:#fff;font-size:12px">${roadLine}</b><br>
+        <span style="color:#6a8090;font-size:9px">${safety}</span>
+        ${supervision ? `<br><span style="color:#6a8090;font-size:9px">Supervision: ${supervision}</span>` : ""}
+        <br><span style="color:#3a5060;font-size:8px">📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}</span>
+      `;
+
+      L.marker([lat, lng], { icon: crossingIcon, zIndexOffset: 100 })
+        .bindPopup(`<div style="border-left:3px solid #f5a623;padding-left:8px">${popHtml}</div>`,
+          {maxWidth: 220})
+        .addTo(crossingLayer);
+    }
+    console.log(`✓ Loaded ${data.elements.length} railway crossings`);
+}
+
+// Load crossings after map is ready (slight delay so map tiles load first)
+setTimeout(loadCrossings, 2000);
 // OpenWeatherMap precipitation tiles (free, no key needed for tile layer)
 // ══════════════════════════════════════════════════════════
 const weatherLayer = L.tileLayer(
@@ -1419,32 +1605,61 @@ function render() {
 // ── List ↔ Map cross-linking ───────────────────────────────
 let selectedId = null;
 function selectTrain(id) {
+  // Deselect previous
   if (selectedId) {
     const prev = document.getElementById("row-"+selectedId);
     if (prev) prev.classList.remove("selected");
-    if (markers[selectedId]) markers[selectedId].closePopup();
   }
-  if (selectedId === id) { selectedId = null; return; }
+  // Toggle off if tapping same train
+  if (selectedId === id) {
+    selectedId = null;
+    return;
+  }
   selectedId = id;
+  // Highlight list row and scroll to it
   const row = document.getElementById("row-"+id);
-  if (row) { row.classList.add("selected"); row.scrollIntoView({block:"nearest",behavior:"smooth"}); }
+  if (row) {
+    row.classList.add("selected");
+    row.scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+  // Pan map to train and open popup
   if (markers[id]) {
-    map.panTo(markers[id].getLatLng(), {animate:true,duration:0.5});
-    setTimeout(()=>{ if(markers[id]) markers[id].openPopup(); }, 520);
+    const latlng = markers[id].getLatLng();
+    map.panTo(latlng, {animate:true, duration:0.4});
+    setTimeout(() => {
+      if (markers[id]) {
+        markers[id].openPopup();
+      }
+    }, 450);
   }
 }
-// ── List row tap — event delegation (works on mobile) ──────
+
+// ── List row tap — unified handler for mobile + desktop ────
+// Uses both click and touchend to ensure it works everywhere
+let _lastTouch = null;
+document.getElementById("listscroll").addEventListener("touchstart", function(e) {
+  const row = e.target.closest("[data-trainid]");
+  _lastTouch = row ? row.dataset.trainid : null;
+}, {passive: true});
+
+document.getElementById("listscroll").addEventListener("touchend", function(e) {
+  const row = e.target.closest("[data-trainid]");
+  if (!row) return;
+  // Only fire if it was a tap (not a scroll)
+  if (_lastTouch === row.dataset.trainid) {
+    e.preventDefault();
+    selectTrain(row.dataset.trainid);
+  }
+  _lastTouch = null;
+}, {passive: false});
+
 document.getElementById("listscroll").addEventListener("click", function(e) {
+  // On desktop (no touch), handle click normally
+  if (_lastTouch !== null) return; // already handled by touchend
   const row = e.target.closest("[data-trainid]");
   if (!row) return;
   selectTrain(row.dataset.trainid);
 });
-document.getElementById("listscroll").addEventListener("touchend", function(e) {
-  const row = e.target.closest("[data-trainid]");
-  if (!row) return;
-  e.preventDefault();
-  selectTrain(row.dataset.trainid);
-}, {passive: false});
 
 requestAnimationFrame(render);
 
