@@ -373,6 +373,10 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         🟡 CSX/TRI-RAIL &nbsp;🟠 FEC/BRIGHTLINE
       </div>
       <div id="apistatus">⏳ LOADING…</div>
+      <div id="trackstatus" style="position:absolute;bottom:48px;left:6px;z-index:1000;
+        background:rgba(5,8,18,.88);border:1px solid #18243a;border-radius:5px;
+        padding:3px 7px;font-size:7px;letter-spacing:1px;pointer-events:none;
+        color:#f5a623;font-family:monospace">🗺 TRACK DATA…</div>
       <!-- locate button — bottom left -->
       <button id="locateBtn" style="position:absolute;bottom:52px;left:6px;z-index:1000;
         background:rgba(5,8,18,.92);border:1px solid #00ee77;color:#00ee77;
@@ -384,6 +388,7 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         <button id="btnDark">🌑 DARK</button>
         <button id="btnWeather">🌧 RAIN</button>
         <button id="btnCrossings" class="on">⚠️ XING</button>
+        <button id="btnTrack" title="Reload real OSM track geometry" style="border-color:#00d4ff;color:#00d4ff">🛤 TRACK</button>
       </div>
     </div>
 
@@ -442,12 +447,11 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
 window.onload = function() {
 
 // ══════════════════════════════════════════════════════════
-// GEOGRAPHY  (updated to exact GPS from user)
+// GEOGRAPHY
 // ══════════════════════════════════════════════════════════
 const YOU_LAT = 26.310540, YOU_LNG = -80.128932;
 const STAT_LAT= 26.3168,   STAT_LNG= -80.1222;
-const CSX_LNG = -80.1222,  FEC_LNG = -80.0995;
-const MAP_N   = 30.40,    MAP_S   = 25.75;  // Full Florida — Jacksonville to Miami
+const MAP_N   = 30.40,     MAP_S   = 25.75;
 
 // ══════════════════════════════════════════════════════════
 // SCHEDULES
@@ -552,41 +556,11 @@ const tEmoji = t => EMOJI[t.type] || "🚆";
 // ══════════════════════════════════════════════════════════
 // ── Operator logos — inline SVG data URIs (no external requests) ─────────────
 const LOGOS = {
-  tri: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">
-    <rect width="120" height="40" rx="5" fill="#c8102e"/>
-    <text x="60" y="16" font-family="Arial Black,sans-serif" font-size="11" font-weight="900" fill="white" text-anchor="middle">TRI-RAIL</text>
-    <text x="60" y="30" font-family="Arial,sans-serif" font-size="7" fill="#ffcccc" text-anchor="middle">SOUTH FLORIDA</text>
-  </svg>`)}`,
-
-  amtrak: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">
-    <rect width="120" height="40" rx="5" fill="#003580"/>
-    <polygon points="8,32 28,8 40,8 20,32" fill="#e31837"/>
-    <polygon points="22,32 42,8 54,8 34,32" fill="#e31837"/>
-    <text x="70" y="26" font-family="Arial Black,sans-serif" font-size="14" font-weight="900" fill="white" text-anchor="middle">Amtrak</text>
-  </svg>`)}`,
-
-  brightline: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">
-    <rect width="120" height="40" rx="5" fill="#1a1a1a"/>
-    <rect x="6" y="10" width="6" height="20" rx="1" fill="#ff0"/>
-    <rect x="15" y="10" width="6" height="20" rx="1" fill="#0f0"/>
-    <rect x="24" y="10" width="6" height="20" rx="1" fill="#0ff"/>
-    <rect x="33" y="10" width="6" height="20" rx="1" fill="#f0f"/>
-    <text x="75" y="26" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="white" text-anchor="middle">brightline</text>
-  </svg>`)}`,
-
-  fec: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">
-    <rect width="120" height="40" rx="5" fill="#1b3a6b"/>
-    <rect x="6" y="8" width="22" height="24" rx="2" fill="#f5a623"/>
-    <text x="17" y="24" font-family="Arial Black,sans-serif" font-size="10" font-weight="900" fill="#1b3a6b" text-anchor="middle">FEC</text>
-    <text x="75" y="18" font-family="Arial,sans-serif" font-size="7.5" fill="white" text-anchor="middle">FLORIDA EAST</text>
-    <text x="75" y="29" font-family="Arial,sans-serif" font-size="7.5" fill="white" text-anchor="middle">COAST RWY</text>
-  </svg>`)}`,
-
-  csx: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40">
-    <rect width="120" height="40" rx="5" fill="#003087"/>
-    <text x="38" y="28" font-family="Arial Black,sans-serif" font-size="22" font-weight="900" fill="white" text-anchor="middle">CSX</text>
-    <text x="85" y="24" font-family="Arial,sans-serif" font-size="7" fill="#aac" text-anchor="middle">TRANSPORTATION</text>
-  </svg>`)}`,
+  tri: "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20120%2040%22%3E%3Crect%20width%3D%22120%22%20height%3D%2240%22%20rx%3D%225%22%20fill%3D%22%23c8102e%22%2F%3E%3Ctext%20x%3D%2260%22%20y%3D%2216%22%20font-family%3D%22Arial%20Black%2Csans-serif%22%20font-size%3D%2211%22%20font-weight%3D%22900%22%20fill%3D%22white%22%20text-anchor%3D%22middle%22%3ETRI-RAIL%3C%2Ftext%3E%3Ctext%20x%3D%2260%22%20y%3D%2230%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%227%22%20fill%3D%22%23ffcccc%22%20text-anchor%3D%22middle%22%3ESOUTH%20FLORIDA%3C%2Ftext%3E%3C%2Fsvg%3E",
+  amtrak: "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20120%2040%22%3E%3Crect%20width%3D%22120%22%20height%3D%2240%22%20rx%3D%225%22%20fill%3D%22%23003580%22%2F%3E%3Cpolygon%20points%3D%228%2C32%2028%2C8%2040%2C8%2020%2C32%22%20fill%3D%22%23e31837%22%2F%3E%3Cpolygon%20points%3D%2222%2C32%2042%2C8%2054%2C8%2034%2C32%22%20fill%3D%22%23e31837%22%2F%3E%3Ctext%20x%3D%2270%22%20y%3D%2226%22%20font-family%3D%22Arial%20Black%2Csans-serif%22%20font-size%3D%2214%22%20font-weight%3D%22900%22%20fill%3D%22white%22%20text-anchor%3D%22middle%22%3EAmtrak%3C%2Ftext%3E%3C%2Fsvg%3E",
+  brightline: "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20120%2040%22%3E%3Crect%20width%3D%22120%22%20height%3D%2240%22%20rx%3D%225%22%20fill%3D%22%231a1a1a%22%2F%3E%3Crect%20x%3D%226%22%20y%3D%2210%22%20width%3D%226%22%20height%3D%2220%22%20rx%3D%221%22%20fill%3D%22%23ff0%22%2F%3E%3Crect%20x%3D%2215%22%20y%3D%2210%22%20width%3D%226%22%20height%3D%2220%22%20rx%3D%221%22%20fill%3D%22%230f0%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2210%22%20width%3D%226%22%20height%3D%2220%22%20rx%3D%221%22%20fill%3D%22%230ff%22%2F%3E%3Crect%20x%3D%2233%22%20y%3D%2210%22%20width%3D%226%22%20height%3D%2220%22%20rx%3D%221%22%20fill%3D%22%23f0f%22%2F%3E%3Ctext%20x%3D%2275%22%20y%3D%2226%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2211%22%20font-weight%3D%22bold%22%20fill%3D%22white%22%20text-anchor%3D%22middle%22%3Ebrightline%3C%2Ftext%3E%3C%2Fsvg%3E",
+  fec: "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20120%2040%22%3E%3Crect%20width%3D%22120%22%20height%3D%2240%22%20rx%3D%225%22%20fill%3D%22%231b3a6b%22%2F%3E%3Crect%20x%3D%226%22%20y%3D%228%22%20width%3D%2222%22%20height%3D%2224%22%20rx%3D%222%22%20fill%3D%22%23f5a623%22%2F%3E%3Ctext%20x%3D%2217%22%20y%3D%2224%22%20font-family%3D%22Arial%20Black%2Csans-serif%22%20font-size%3D%2210%22%20font-weight%3D%22900%22%20fill%3D%22%231b3a6b%22%20text-anchor%3D%22middle%22%3EFEC%3C%2Ftext%3E%3Ctext%20x%3D%2275%22%20y%3D%2218%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%227.5%22%20fill%3D%22white%22%20text-anchor%3D%22middle%22%3EFLORIDA%20EAST%3C%2Ftext%3E%3Ctext%20x%3D%2275%22%20y%3D%2229%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%227.5%22%20fill%3D%22white%22%20text-anchor%3D%22middle%22%3ECOAST%20RWY%3C%2Ftext%3E%3C%2Fsvg%3E",
+  csx: "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20120%2040%22%3E%3Crect%20width%3D%22120%22%20height%3D%2240%22%20rx%3D%225%22%20fill%3D%22%23003087%22%2F%3E%3Ctext%20x%3D%2238%22%20y%3D%2228%22%20font-family%3D%22Arial%20Black%2Csans-serif%22%20font-size%3D%2222%22%20font-weight%3D%22900%22%20fill%3D%22white%22%20text-anchor%3D%22middle%22%3ECSX%3C%2Ftext%3E%3Ctext%20x%3D%2285%22%20y%3D%2224%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%227%22%20fill%3D%22%23aac%22%20text-anchor%3D%22middle%22%3ETRANSPORTATION%3C%2Ftext%3E%3C%2Fsvg%3E",
 };
 
 // ── Pre-size the map container BEFORE Leaflet measures it ──
@@ -784,14 +758,442 @@ const fecPts = [
   [25.8450,-80.2130],  // ★ Hialeah Yard terminus
 ];
 
-// ── Static polylines drawn crossing-to-crossing (no dynamic snapping needed) ──
+// ══════════════════════════════════════════════════════════
+// REAL OSM TRACK GEOMETRY
+// On first load, fetches actual railway polylines from
+// OpenStreetMap via the Overpass API and caches them in
+// localStorage so subsequent loads are instant offline.
+//
+// Fallback: if OSM is unavailable, uses the hand-crafted
+// crossing-to-crossing arrays (csxPts / fecPts) above.
+//
+// The two Overpass queries fetch:
+//  - CSX/SFRTA corridor: railway=rail in the bbox with
+//    operator matching CSX or SFRTA/Tri-Rail
+//  - FEC/Brightline corridor: same bbox, operator FEC
+// Each returns a set of ways with node geometry which we
+// stitch into ordered polylines.
+// ══════════════════════════════════════════════════════════
+
+const TRACK_CACHE_KEY  = "osmTrackData_v3";
+const TRACK_CACHE_DAYS = 30;   // refresh every 30 days
+
+// Polyline objects on the map — replaced once OSM data loads
 let csxPolyBg = L.polyline(csxPts,{color:"#000",   weight:6,  opacity:.45}).addTo(map);
 let csxPolyFg = L.polyline(csxPts,{color:"#ffe066",weight:2.5,opacity:.9 }).addTo(map);
 let fecPolyBg = L.polyline(fecPts,{color:"#000",   weight:6,  opacity:.45}).addTo(map);
 let fecPolyFg = L.polyline(fecPts,{color:"#ff8c00",weight:2.5,opacity:.9 }).addTo(map);
 
+// Live arrays — start with fallback, get replaced if OSM loads
+let liveCsxPts = csxPts;
+let liveFecPts = fecPts;
+
+// Redraw both tracks from current live arrays
+function redrawLivePolylines() {
+  csxPolyBg.setLatLngs(liveCsxPts);
+  csxPolyFg.setLatLngs(liveCsxPts);
+  fecPolyBg.setLatLngs(liveFecPts);
+  fecPolyFg.setLatLngs(liveFecPts);
+  // Rebuild track engine with new geometry
+  rebuildTrackEngine();
+}
+
+// ── Overpass query builder ────────────────────────────────
+// Returns all railway=rail ways inside Florida bbox,
+// filtered by operator tag containing the given keyword.
+function buildOverpassQuery(operatorKeyword) {
+  // Bounding box covers full Florida: S,W,N,E
+  const bbox = "24.5,-87.6,31.0,-80.0";
+  return `[out:json][timeout:60];
+way["railway"="rail"]["operator"~"${operatorKeyword}",i](${bbox});
+out geom;`;
+}
+
+// Separate query for FEC (runs east coast, no CSX overlap)
+const OVERPASS_QUERIES = [
+  {
+    key: "csx",
+    // CSX Transportation owns the tracks; SFRTA/Tri-Rail leases them
+    query: buildOverpassQuery("CSX|SFRTA|South Florida Regional"),
+    color: "#ffe066",
+    label: "CSX/Tri-Rail"
+  },
+  {
+    key: "fec",
+    query: buildOverpassQuery("Florida East Coast|Brightline|Virgin Trains"),
+    color: "#ff8c00",
+    label: "FEC/Brightline"
+  }
+];
+
+// ── Stitch OSM ways into ordered polylines ────────────────
+// OSM ways come as unordered segments. We stitch them into
+// a single continuous line by matching endpoints.
+function stitchWays(elements) {
+  // Each element has .geometry = [{lat,lon}, ...]
+  // Build a list of coordinate chains
+  const chains = elements
+    .filter(el => el.type === "way" && el.geometry && el.geometry.length >= 2)
+    .map(el => el.geometry.map(n => [n.lat, n.lon]));
+
+  if (chains.length === 0) return [];
+  if (chains.length === 1) return chains[0];
+
+  // Greedy stitching: repeatedly attach the chain whose endpoint
+  // is closest to our current tail
+  const result = [...chains[0]];
+  const unused = chains.slice(1);
+
+  while (unused.length > 0) {
+    const tail = result[result.length - 1];
+    let bestIdx = -1, bestDist = Infinity, bestReverse = false;
+
+    for (let i = 0; i < unused.length; i++) {
+      const head = unused[i][0];
+      const end  = unused[i][unused[i].length - 1];
+      const dH = Math.hypot(tail[0]-head[0], tail[1]-head[1]);
+      const dE = Math.hypot(tail[0]-end[0],  tail[1]-end[1]);
+      if (dH < bestDist) { bestDist = dH; bestIdx = i; bestReverse = false; }
+      if (dE < bestDist) { bestDist = dE; bestIdx = i; bestReverse = true;  }
+    }
+
+    // If gap is too large (>0.5°, ~35 miles) don't stitch — start new chain
+    if (bestDist > 0.5) {
+      // Just append with a gap (skip — polyline handles disconnected segments)
+      const chain = unused.splice(bestIdx, 1)[0];
+      result.push(...(bestReverse ? [...chain].reverse() : chain));
+    } else {
+      const chain = unused.splice(bestIdx, 1)[0];
+      const pts   = bestReverse ? [...chain].reverse() : chain;
+      // Skip first point if it overlaps with tail
+      result.push(...pts.slice(1));
+    }
+  }
+
+  return result;
+}
+
+// ── Filter to just the South Florida corridor ─────────────
+// The full CSX/FEC networks span multiple states.
+// We only care about the South Florida segment for train positioning,
+// but we draw the full Florida segment for visual context.
+function filterToFlorida(pts) {
+  // Keep only points inside Florida bounding box
+  return pts.filter(([lat, lng]) =>
+    lat >= 24.4 && lat <= 31.1 && lng >= -87.7 && lng <= -80.0
+  );
+}
+
+// ── Fetch OSM track data ──────────────────────────────────
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+];
+
+async function fetchFromOverpass(query) {
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const r = await fetch(endpoint, {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: "data=" + encodeURIComponent(query),
+        signal: AbortSignal.timeout(30000),
+      });
+      if (!r.ok) continue;
+      const data = await r.json();
+      if (data.elements && data.elements.length > 0) return data;
+    } catch { /* try next endpoint */ }
+  }
+  return null;
+}
+
+// ── Status badge ──────────────────────────────────────────
+function setTrackStatus(msg, col) {
+  const el = document.getElementById("trackstatus");
+  if (el) { el.textContent = msg; el.style.color = col || "#f5a623"; }
+}
+
+// ── Main: load OSM tracks ─────────────────────────────────
+async function loadOsmTracks() {
+  // Skip on Claude preview (Overpass won't work there anyway)
+  if (location.hostname.includes("claudeusercontent")) {
+    setTrackStatus("🗺 FALLBACK TRACK", "#f5a623");
+    return;
+  }
+
+  // Check cache
+  try {
+    const cached = localStorage.getItem(TRACK_CACHE_KEY);
+    if (cached) {
+      const { ts, csx, fec } = JSON.parse(cached);
+      const ageDays = (Date.now() - ts) / (1000 * 60 * 60 * 24);
+      if (ageDays < TRACK_CACHE_DAYS && csx.length > 10 && fec.length > 10) {
+        liveCsxPts = csx;
+        liveFecPts = fec;
+        redrawLivePolylines();
+        setTrackStatus(`🛤 OSM TRACK (${Math.floor(ageDays)}d ago)`, "#00ee77");
+        console.log(`✓ Loaded cached OSM tracks (CSX: ${csx.length}pts, FEC: ${fec.length}pts)`);
+        return;
+      }
+    }
+  } catch(e) {}
+
+  setTrackStatus("⏳ LOADING OSM TRACKS…", "#f5a623");
+
+  // Fetch both corridors
+  const results = {};
+  for (const q of OVERPASS_QUERIES) {
+    const data = await fetchFromOverpass(q.query);
+    if (data && data.elements.length > 0) {
+      const stitched = stitchWays(data.elements);
+      const florida  = filterToFlorida(stitched);
+      if (florida.length > 5) {
+        results[q.key] = florida;
+        console.log(`✓ OSM ${q.label}: ${florida.length} points`);
+      }
+    }
+  }
+
+  if (results.csx && results.csx.length > 5) {
+    liveCsxPts = results.csx;
+  }
+  if (results.fec && results.fec.length > 5) {
+    liveFecPts = results.fec;
+  }
+
+  if (results.csx || results.fec) {
+    redrawLivePolylines();
+    setTrackStatus(`🛤 REAL OSM TRACK`, "#00ee77");
+    // Cache for 30 days
+    try {
+      localStorage.setItem(TRACK_CACHE_KEY, JSON.stringify({
+        ts: Date.now(),
+        csx: liveCsxPts,
+        fec: liveFecPts,
+      }));
+    } catch(e) {}
+  } else {
+    setTrackStatus("🗺 FALLBACK TRACK", "#f5a623");
+    console.warn("OSM fetch failed — using fallback crossing-point data");
+  }
+}
+
+// Kick off OSM fetch after map is ready (500ms delay so map renders first)
+setTimeout(loadOsmTracks, 500);
+
+// Force-refresh: clears cache and re-fetches from OSM
+async function refreshOsmTracks() {
+  const btn = document.getElementById("btnTrack");
+  if (btn) { btn.textContent = "⏳"; btn.style.color = "#f5a623"; }
+  try { localStorage.removeItem(TRACK_CACHE_KEY); } catch(e) {}
+  await loadOsmTracks();
+  if (btn) { btn.textContent = "🛤 TRACK"; btn.style.color = "#00d4ff"; }
+}
+
 // ══════════════════════════════════════════════════════════
-// FEATURE 9 — FREIGHT CARGO INFO
+// TRACK ENGINE — polyline interpolation along real OSM geometry
+// Rebuilt every time OSM data loads or refreshes.
+// ══════════════════════════════════════════════════════════
+
+// Precompute cumulative arc lengths along a polyline
+function buildTrack(pts) {
+  const segs = [];
+  let total = 0;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [lat1,lng1] = pts[i], [lat2,lng2] = pts[i+1];
+    const dlat = lat2-lat1;
+    const dlng = (lng2-lng1) * Math.cos((lat1+lat2)*0.5 * Math.PI/180);
+    const d = Math.sqrt(dlat*dlat + dlng*dlng);
+    segs.push({lat1,lng1,lat2,lng2,segLen:d,cumStart:total});
+    total += d;
+  }
+  return {segs, total};
+}
+
+// Return {lat,lng} at fraction 0–1 along the track
+function posOnTrack(track, fraction) {
+  const target = Math.max(0, Math.min(1, fraction)) * track.total;
+  for (let i = 0; i < track.segs.length; i++) {
+    const s = track.segs[i];
+    const cumEnd = s.cumStart + s.segLen;
+    if (target <= cumEnd || i === track.segs.length - 1) {
+      const t = s.segLen > 0 ? (target - s.cumStart) / s.segLen : 0;
+      return {
+        lat: s.lat1 + t * (s.lat2 - s.lat1),
+        lng: s.lng1 + t * (s.lng2 - s.lng1),
+      };
+    }
+  }
+  const last = track.segs[track.segs.length-1];
+  return {lat: last.lat2, lng: last.lng2};
+}
+
+// Find fraction at which a given latitude appears on a track
+function stationFraction(track, refLat) {
+  let best = 0, bestDist = Infinity;
+  for (let i = 0; i < track.segs.length; i++) {
+    const s = track.segs[i];
+    const midLat = (s.lat1+s.lat2)/2;
+    const d = Math.abs(midLat - refLat);
+    if (d < bestDist) {
+      bestDist = d;
+      best = (s.cumStart + s.segLen/2) / track.total;
+    }
+  }
+  return best;
+}
+
+// Mutable track state — rebuilt when OSM data loads
+let csxTrack, fecTrack, csxStatFrac, fecStatFrac;
+
+function rebuildTrackEngine() {
+  csxTrack    = buildTrack(liveCsxPts);
+  fecTrack    = buildTrack(liveFecPts);
+  csxStatFrac = stationFraction(csxTrack, STAT_LAT);
+  fecStatFrac = stationFraction(fecTrack, STAT_LAT);
+  console.log(`Track engine rebuilt: CSX statFrac=${csxStatFrac.toFixed(4)}, FEC statFrac=${fecStatFrac.toFixed(4)}`);
+}
+rebuildTrackEngine(); // initial build with fallback data
+
+// Speed constants for schedule-based trains (mph)
+const SPEED_MPH = {tri:55, amtrak:60, brightline:90, fec:45, csx:40};
+
+// Convert mph to track-fraction per minute
+function speedToFracPerMin(track, mph) {
+  // track.total is in ~degrees; 1° lat ≈ 69 miles; cos-corrected lng built in
+  const totalMiles = track.total * 69;
+  return mph / (totalMiles * 60);
+}
+
+// Return {lat,lng} for a scheduled train at simMins
+function schedPos(t, sM) {
+  const track    = t.track === "fec" ? fecTrack : csxTrack;
+  const statFrac = t.track === "fec" ? fecStatFrac : csxStatFrac;
+  const fpm      = speedToFracPerMin(track, SPEED_MPH[t.type] || 50);
+  const diff     = sM - t.mins;
+  // SB trains move toward higher fractions (south end of track)
+  const fracOffset = t.dir === "SB" ? diff * fpm : -diff * fpm;
+  const frac = Math.max(0, Math.min(1, statFrac + fracOffset));
+  return posOnTrack(track, frac);
+}
+
+// True if train is currently between track endpoints
+function onTrack(t, sM) {
+  const track    = t.track === "fec" ? fecTrack : csxTrack;
+  const statFrac = t.track === "fec" ? fecStatFrac : csxStatFrac;
+  const fpm      = speedToFracPerMin(track, SPEED_MPH[t.type] || 50);
+  const diff     = sM - t.mins;
+  const fracOffset = t.dir === "SB" ? diff * fpm : -diff * fpm;
+  const frac = statFrac + fracOffset;
+  return frac >= 0 && frac <= 1;
+}
+
+// ══════════════════════════════════════════════════════════
+// TRAIN MARKERS — emoji + logo + direction badge
+// ══════════════════════════════════════════════════════════
+const markers = {};
+
+function trainIcon(type, emoji, col, dir, isLive, speed) {
+  const arr     = dir === "SB" ? "↓" : "↑";
+  const logoSrc = LOGOS[type] || "";
+  const spdBadge = speed > 0 ? `<div style="font-size:7px;color:#f5a623;font-weight:bold;line-height:1">${Math.round(speed)}mph</div>` : "";
+  const glowStyle = isLive
+    ? `filter:drop-shadow(0 0 5px gold) drop-shadow(0 0 3px #000)`
+    : `filter:drop-shadow(0 0 3px #000)`;
+  return L.divIcon({
+    html: `<div style="display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer">
+      <div style="font-size:18px;line-height:1;${glowStyle}">${emoji}</div>
+      <img src="${logoSrc}" style="width:34px;height:13px;object-fit:contain;
+        background:rgba(5,8,20,.82);border-radius:3px;padding:1px 2px;
+        border:1px solid ${col}66;display:block" alt="${type}"/>
+      <div style="font-size:8px;font-weight:bold;color:${col};
+        background:rgba(5,8,20,.82);border-radius:2px;padding:0 3px;
+        border:1px solid ${col}44;line-height:1.4">${arr}</div>
+      ${spdBadge}
+    </div>`,
+    className: "",
+    iconSize: [38, 52],
+    iconAnchor: [19, 10],
+    popupAnchor: [0, -12],
+  });
+}
+
+function putMarker(id, lat, lng, type, emoji, col, dir, isLive, popHtml, speed) {
+  const icon = trainIcon(type, emoji, col, dir, isLive, speed || 0);
+  if (!markers[id]) {
+    markers[id] = L.marker([lat, lng], {
+      icon,
+      zIndexOffset: isLive ? 1500 : 600,
+    }).addTo(map);
+    markers[id].on("click", () => selectTrain(id));
+  } else {
+    markers[id].setLatLng([lat, lng]);
+    markers[id].setIcon(icon);
+  }
+  markers[id].unbindPopup();
+  markers[id].bindPopup(
+    `<div style="border-left:3px solid ${col};padding-left:8px">${popHtml}</div>`
+  );
+}
+
+function cullMarkers(keepIds) {
+  for (const id of Object.keys(markers)) {
+    if (!keepIds.has(id)) {
+      map.removeLayer(markers[id]);
+      delete markers[id];
+    }
+  }
+}
+
+function highlightRow(id) {
+  selectedId = id;
+  const row = document.getElementById("row-"+id);
+  if (row) { row.style.outline = "2px solid #f5a623"; row.style.outlineOffset = "-1px"; }
+}
+function unhighlightRow(id) {
+  const row = document.getElementById("row-"+id);
+  if (row) { row.style.outline = ""; }
+  if (selectedId === id) selectedId = null;
+}
+
+// ══════════════════════════════════════════════════════════
+// LIVE API — Amtraker (Amtrak + Brightline)
+// ══════════════════════════════════════════════════════════
+async function fetchLive() {
+  try {
+    const r = await fetch("https://api-v3.amtraker.com/v3/trains", {cache:"no-store"});
+    if (!r.ok) throw 0;
+    const data = await r.json();
+    const out = {};
+    for (const [num, trains] of Object.entries(data)) {
+      for (const t of trains) {
+        if (!t.lat || !t.lon) continue;
+        if (t.lat < MAP_S-1 || t.lat > MAP_N+1) continue;
+        const isBL = String(t.trainNum||"").startsWith("b");
+        const id   = "live_"+(t.trainID||num);
+        const dir  = ["S","SE","SW"].some(h=>(t.heading||"").startsWith(h))?"SB":"NB";
+        out[id] = {
+          lat:t.lat, lng:t.lon, heading:t.heading||"",
+          name: t.routeName||(isBL?"Brightline":"Amtrak"),
+          num:  String(t.trainNum||num),
+          type: isBL?"brightline":"amtrak",
+          dir, speed:t.velocity||0,
+          updated: t.updatedAt ? new Date(t.updatedAt) : new Date(),
+        };
+      }
+    }
+    liveData=out; apiGood=true; lastFetch=Date.now();
+    document.getElementById("apistatus").textContent="📡 LIVE GPS";
+    document.getElementById("apistatus").style.color="#00ee77";
+  } catch {
+    apiGood=false;
+    document.getElementById("apistatus").textContent="📅 SCHEDULE";
+    document.getElementById("apistatus").style.color="#f5a623";
+  }
+}
+fetchLive();
+setInterval(fetchLive, 30000);
 // Based on FEC/CSX train symbols from botecomm.com schedules
 // ══════════════════════════════════════════════════════════
 const CARGO = {
@@ -1074,6 +1476,141 @@ function updateHistUI() {
 }
 updateHistUI();
 
+// ══════════════════════════════════════════════════════════
+// STATE & BUTTON FUNCTIONS
+// ══════════════════════════════════════════════════════════
+let isLive = true, simSpeed = 1, simTime = new Date(), lastRealMs = Date.now();
+let curFilter = "all", liveData = {}, lastFetch = 0, apiGood = false;
+let desktopMode = false;
+
+function goLive() {
+  isLive=true; simTime=new Date(); lastRealMs=Date.now();
+  document.getElementById("liveBtn").className="on";
+  document.getElementById("s60").className="";
+  document.getElementById("s300").className="";
+  document.getElementById("liveindicator").className="isLive";
+  document.getElementById("liveindicator").textContent="●";
+}
+function setSim(sp) {
+  isLive=false; simSpeed=sp; lastRealMs=Date.now();
+  document.getElementById("liveBtn").className="";
+  document.getElementById("s60").className=sp===60?"on":"";
+  document.getElementById("s300").className=sp===300?"on":"";
+  document.getElementById("liveindicator").className="isSim";
+  document.getElementById("liveindicator").textContent="~";
+}
+function setFilter(f, btn) {
+  curFilter=f;
+  document.querySelectorAll("#filters button").forEach(b=>b.className="");
+  if(btn) btn.className="on";
+}
+function toggleMode() {
+  desktopMode = !desktopMode;
+  const bodyEl = document.getElementById("body");
+  const btn    = document.getElementById("modeBtn");
+  if (desktopMode) {
+    bodyEl.classList.add("desktop");
+    btn.textContent = "📱"; btn.classList.add("on");
+  } else {
+    bodyEl.classList.remove("desktop");
+    btn.textContent = "🖥"; btn.classList.remove("on");
+  }
+  setTimeout(() => map.invalidateSize({animate:false}), 80);
+}
+
+// ── Wire up ALL buttons ──────────────────────────────────
+document.getElementById("liveBtn") .addEventListener("click", goLive);
+document.getElementById("s60")     .addEventListener("click", () => setSim(60));
+document.getElementById("s300")    .addEventListener("click", () => setSim(300));
+document.getElementById("modeBtn") .addEventListener("click", toggleMode);
+document.getElementById("btnSat")  .addEventListener("click", () => setLayer("sat"));
+document.getElementById("btnOsm")  .addEventListener("click", () => setLayer("osm"));
+document.getElementById("btnDark") .addEventListener("click", () => setLayer("dark"));
+document.getElementById("btnWeather").addEventListener("click", toggleWeather);
+document.getElementById("btnTrack").addEventListener("click", refreshOsmTracks);
+document.getElementById("btnCrossings").addEventListener("click", function() {
+  crossingsEnabled = !crossingsEnabled;
+  if (crossingsEnabled) {
+    crossingLayer.addTo(map);
+    this.classList.add("on");
+    scheduleCrossingFetch();
+  } else {
+    map.removeLayer(crossingLayer);
+    crossingLayer.clearLayers();
+    crossingCache = {}; lastFetchBounds = null;
+    anchors.csx = []; anchors.fec = [];
+    redrawTracks();
+    this.classList.remove("on");
+  }
+});
+document.getElementById("fAll")   .addEventListener("click", function(){ setFilter("all",       this); });
+document.getElementById("fTri")   .addEventListener("click", function(){ setFilter("tri",       this); });
+document.getElementById("fAmtrak").addEventListener("click", function(){ setFilter("amtrak",    this); });
+document.getElementById("fBL")    .addEventListener("click", function(){ setFilter("brightline",this); });
+document.getElementById("fFec")   .addEventListener("click", function(){ setFilter("fec",       this); });
+document.getElementById("fCsx")   .addEventListener("click", function(){ setFilter("csx",       this); });
+document.getElementById("histBtn").addEventListener("click", () => {
+  updateHistUI();
+  document.getElementById("historyPanel").classList.add("open");
+});
+document.getElementById("histClose").addEventListener("click", () => {
+  document.getElementById("historyPanel").classList.remove("open");
+});
+document.getElementById("histClear").addEventListener("click", () => {
+  if (confirm("Clear all logged trains?")) {
+    tripLog = []; loggedIds.clear(); saveLog(); updateHistUI();
+  }
+});
+document.getElementById("histExport").addEventListener("click", () => {
+  const csv = ["Date,Time,Train,Category,Direction,Cargo,Lat,Lng,Source"]
+    .concat(tripLog.map(e =>
+      `${e.date},${e.time},"${e.train}","${e.cat}",${e.dir},"${(e.cargo||"").replace(/"/g,"'")}",${e.lat},${e.lng},${e.auto?"auto":"manual"}`
+    )).join("\n");
+  navigator.clipboard.writeText(csv).then(() => alert("CSV copied!")).catch(() => alert(csv));
+});
+document.getElementById("locateBtn").addEventListener("click", function() {
+  const btn = this;
+  btn.textContent = "⏳";
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        map.setView([lat, lng], 13, {animate:true});
+        if (window._youMarker) map.removeLayer(window._youMarker);
+        window._youMarker = L.marker([lat,lng], {
+          icon: L.divIcon({html:`<div class="you-ring"><div class="you-dot"></div></div>`,
+            className:"",iconSize:[18,18],iconAnchor:[9,9]}), zIndexOffset:2000
+        }).bindPopup(`<div><div style="color:#00ee77;font-size:8px;letter-spacing:2px">LIVE GPS</div>
+          <b style="color:#fff">${lat.toFixed(6)}, ${lng.toFixed(6)}</b><br>
+          <span style="color:#6a8090;font-size:9px">±${Math.round(pos.coords.accuracy)}m</span></div>`)
+          .addTo(map).openPopup();
+        btn.textContent = "📍";
+        btn.style.borderColor = "#00ee77"; btn.style.color = "#00ee77";
+      },
+      () => {
+        map.setView([YOU_LAT, YOU_LNG], 13, {animate:true});
+        btn.textContent = "📍";
+        btn.style.borderColor = "#f5a623"; btn.style.color = "#f5a623";
+      },
+      {enableHighAccuracy:true, timeout:8000, maximumAge:30000}
+    );
+  } else {
+    map.setView([YOU_LAT, YOU_LNG], 13, {animate:true});
+    btn.textContent = "📍";
+  }
+});
+
+// List scroll detection
+let _pointerDownY = 0;
+document.getElementById("listscroll").addEventListener("pointerdown", e => { _pointerDownY = e.clientY; }, {passive:true});
+document.getElementById("listscroll").addEventListener("pointerup", function(e) {
+  if (e.button > 0) return;
+  if (Math.abs(e.clientY - _pointerDownY) > 8) return;
+  const row = e.target.closest("[data-trainid]");
+  if (!row) return;
+  selectTrain(row.dataset.trainid);
+});
+document.getElementById("listscroll").addEventListener("click", e => e.stopPropagation());
 
 const pad   = n => String(Math.floor(Math.abs(n))).padStart(2,"0");
 const fmtT  = d => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -1252,34 +1789,41 @@ function selectTrain(id) {
   }
 }
 
-// ── List row interactions — simple and bulletproof ─────────
-// Single unified pointer handler works on ALL devices (mouse, touch, stylus)
-let _pointerDownY = 0;
-document.getElementById("listscroll").addEventListener("pointerdown", function(e) {
-  _pointerDownY = e.clientY;
-}, {passive: true});
-
-document.getElementById("listscroll").addEventListener("pointerup", function(e) {
-  if (e.button > 0) return;
-  // Ignore if user scrolled more than 8px (it was a scroll not a tap)
-  if (Math.abs(e.clientY - _pointerDownY) > 8) return;
-  const row = e.target.closest("[data-trainid]");
-  if (!row) return;
-  selectTrain(row.dataset.trainid);
-});
-
-// Prevent ghost clicks on mobile
-document.getElementById("listscroll").addEventListener("click", function(e) {
-  e.stopPropagation();
-});
-
 requestAnimationFrame(render);
 
-// ── Force map to fill its container after layout settles ──
-setTimeout(fixMapSize, 0);
-setTimeout(fixMapSize, 50);
-setTimeout(fixMapSize, 200);
-setTimeout(fixMapSize, 500);
+// ══════════════════════════════════════════════════════════
+// MAP SIZE FIX — runs multiple times to guarantee map fills container
+// ══════════════════════════════════════════════════════════
+function fixMapSize() {
+  // Clear any inline overrides so CSS media queries take control
+  const wrap = document.getElementById("mapwrap");
+  if (wrap) { wrap.style.width = ""; wrap.style.height = ""; }
+  document.getElementById("body").style.flexDirection = "";
+  map.invalidateSize({animate: false});
+}
+
+// Auto-detect device and apply correct layout
+function autoDetectAndFix() {
+  const ua = navigator.userAgent || "";
+  const isMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(ua);
+
+  if (!isMobile) {
+    // Desktop: switch to side-by-side layout
+    if (!desktopMode) {
+      desktopMode = true;
+      document.getElementById("body").classList.add("desktop");
+      const btn = document.getElementById("modeBtn");
+      if (btn) { btn.textContent = "📱"; btn.classList.add("on"); }
+    }
+  }
+  fixMapSize();
+}
+
+// Run immediately, then again at 100ms, 300ms, 600ms to cover all timing scenarios
+autoDetectAndFix();
+setTimeout(autoDetectAndFix, 100);
+setTimeout(autoDetectAndFix, 300);
+setTimeout(autoDetectAndFix, 600);
 window.addEventListener("resize", fixMapSize);
 
 }; // end window.onload
