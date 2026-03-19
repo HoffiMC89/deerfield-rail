@@ -622,160 +622,55 @@ L.tileLayer(
   {attribution:"",maxZoom:19,opacity:0.85,pane:"shadowPane"}
 ).addTo(map);
 
-// ── Track polylines — BUILT FROM REAL STREET CROSSING POSITIONS ─────────────
-// Every point is the GPS coordinate of an actual road-rail crossing,
-// verified from known street intersections on both corridors.
-// Line is drawn crossing-to-crossing so it follows the real track precisely.
-// CSX/SFRTA = yellow  |  FEC/Brightline = orange
+// ══════════════════════════════════════════════════════════
+// TRACK SYSTEM — single source of truth
 //
-// ── CSX / South Florida Rail Corridor (SFRC) ──
-// South Florida section only — Mangonia Park (WPB) to Miami Airport
-// Runs parallel to Military Trail / NW 27th Ave, WEST of I-95
-const csxPts = [
-  // ── SOUTH FLORIDA RAIL CORRIDOR: crossing-to-crossing ──
-  [26.7419,-80.1120],  // Mangonia Park station
-  [26.7130,-80.1125],  // 45th St, WPB
-  [26.6955,-80.1138],  // Summit Blvd
-  [26.6770,-80.1150],  // Hypoluxo Rd
-  [26.6475,-80.1215],  // Lake Worth Rd
-  [26.6200,-80.1230],  // Lantana Rd
-  [26.5955,-80.1248],  // Boynton Beach Blvd
-  [26.5570,-80.1265],  // Woolbright Rd
-  [26.5185,-80.1278],  // Linton Blvd, Delray
-  [26.4985,-80.1285],  // Atlantic Ave, Delray Beach
-  [26.4695,-80.1290],  // Clint Moore Rd
-  [26.4490,-80.1295],  // Yamato / Glades Rd
-  [26.4200,-80.1305],  // Camino Real, Boca
-  [26.3960,-80.1315],  // SW 18th St, Boca
-  [26.3760,-80.1325],  // Palmetto Park Rd, Boca
-  [26.3570,-80.1332],  // SW 10th St approach
-  [26.3168,-80.1338],  // ★ Hillsboro Blvd — DEERFIELD BCH STATION
-  [26.2955,-80.1342],  // Sample Rd
-  [26.2720,-80.1350],  // Atlantic Blvd, Pompano
-  [26.2518,-80.1360],  // Copans Rd
-  [26.2390,-80.1368],  // Cypress Creek Rd
-  [26.2175,-80.1380],  // Commercial Blvd
-  [26.1935,-80.1395],  // Oakland Park Blvd
-  [26.1820,-80.1408],  // Sunrise Blvd
-  [26.1650,-80.1422],  // Broward Blvd — FTL AMTRAK STATION
-  [26.1455,-80.1435],  // Stirling Rd / Davie Blvd
-  [26.1218,-80.1448],  // Hollywood Blvd
-  [26.1020,-80.1462],  // Sheridan St — HOLLYWOOD STATION
-  [26.0785,-80.1490],  // Miramar Pkwy
-  [26.0555,-80.1548],  // Pembroke Rd
-  [26.0305,-80.1640],  // Hallandale Beach Blvd
-  [26.0060,-80.1720],  // Golden Glades / NW 199th — SFRC curves SW here
-  [25.9880,-80.1810],  // NW 191st St
-  [25.9720,-80.1920],  // NW 183rd St
-  [25.9580,-80.2020],  // NW 175th St
-  [25.9440,-80.2130],  // NW 167th St
-  [25.9300,-80.2240],  // NW 154th St / Opa-locka area
-  [25.9150,-80.2380],  // NW 138th St
-  [25.9000,-80.2520],  // NW 125th St
-  [25.8850,-80.2650],  // NW 119th St
-  [25.8650,-80.2810],  // NW 103rd St — curve toward Miami Airport
-  [25.8400,-80.2930],  // NW 79th St area
-  [25.8100,-80.2950],  // NW 58th St
-  [25.7960,-80.2940],  // ★ Miami Airport / Hialeah — SFRC terminus
-];
-
-// ── FEC / Florida East Coast / Brightline corridor ──
-// South Florida section only — WPB to Hialeah Yard
-// North section omitted as trains only interpolate within this range
-const fecPts = [
-  // ── WPB to Boca (US-1 corridor, east of I-95) ──
-  [26.7130,-80.0535],  // ★ Brightline WPB station
-  [26.6928,-80.0548],  // Belvedere Rd
-  [26.6772,-80.0562],  // Southern Blvd
-  [26.6475,-80.0582],  // Lake Worth Rd
-  [26.6195,-80.0622],  // Lantana Rd
-  [26.5955,-80.0685],  // Boynton Beach Blvd
-  [26.5570,-80.0730],  // Woolbright Rd
-  [26.5185,-80.0768],  // Linton Blvd
-  [26.4985,-80.0785],  // Atlantic Ave, Delray
-  [26.4695,-80.0840],  // Clint Moore Rd
-  [26.4490,-80.0868],  // Yamato Rd — ★ BRIGHTLINE BOCA
-  [26.4200,-80.0888],  // Camino Real
-  [26.3960,-80.0905],  // SW 18th St
-  [26.3760,-80.0918],  // Palmetto Park Rd
-  [26.3570,-80.0928],  // Hillsboro Blvd FEC
-  [26.3168,-80.0915],  // ★ Deerfield Beach FEC
-  [26.2955,-80.0918],  // Sample Rd
-  [26.2720,-80.0920],  // Atlantic Blvd, Pompano FEC
-  [26.2518,-80.0922],  // Copans Rd
-  [26.2390,-80.0925],  // Cypress Creek Rd
-  [26.2175,-80.0930],  // Commercial Blvd
-  [26.1935,-80.0935],  // Oakland Park Blvd
-  [26.1820,-80.0940],  // Sunrise Blvd
-  [26.1650,-80.0945],  // Broward Blvd
-  [26.1455,-80.0962],  // Stirling Rd
-  // FEC curves slightly east through Dania Beach area then stays near US-1
-  [26.1200,-80.0975],  // Dania Beach Blvd
-  [26.1050,-80.0988],  // NE 2nd St / Dania area
-  // ★ Brightline Fort Lauderdale station is at NW 2nd Ave — FEC runs EAST of I-95 here
-  // The track goes east of the airport, not through it
-  [26.0960,-80.1010],  // Griffin Rd area — east of FLL airport
-  [26.0820,-80.1025],  // Sheridan St FEC crossing
-  [26.0580,-80.1042],  // Pembroke Rd FEC
-  [26.0330,-80.1060],  // Hallandale Beach Blvd FEC
-  [26.0060,-80.1078],  // NW 199th St FEC
-  [25.9820,-80.1095],  // Ives Dairy Rd FEC
-  [25.9580,-80.1110],  // Aventura / NE 203rd — FEC turns inland here
-  [25.9420,-80.1310],  // NE 195th St — track curves west away from coast
-  [25.9250,-80.1520],  // NE 183rd St / North Miami Beach
-  [25.9100,-80.1680],  // NE 167th St — running through North Miami
-  [25.8950,-80.1810],  // NE 151st St / North Miami
-  [25.8800,-80.1870],  // NE 135th St
-  [25.8650,-80.1900],  // NE 123rd St / Little River
-  [25.8500,-80.1930],  // NE 111th St
-  [25.8350,-80.1960],  // NE 95th St / Miami Shores
-  [25.8200,-80.1990],  // NE 79th St — approaches Hialeah Yard area
-  [25.8050,-80.2050],  // NE 61st St
-  [25.7950,-80.2130],  // ★ Hialeah Yard / Little River terminus
-];
-
-// ══════════════════════════════════════════════════════════
-// TRACK DISPLAY — colored polylines fetched from real OSM data
-// SFRC = blue  |  FEC = orange
-// On first load fetches real node geometry from Overpass and
-// caches in localStorage. Falls back to hand-crafted arrays.
-// ORM tile overlay shows all track detail underneath.
+// Both the VISIBLE colored lines AND the train interpolation
+// engine use EXACTLY the same coordinate arrays.
+// There are NO fallback hand-crafted arrays that could
+// cause ghost lines. If OSM data isn't loaded yet, the
+// lines show as empty and trains aren't placed until data loads.
+//
+// SFRC (Tri-Rail / CSX corridor) = BLUE  #3b82f6
+// FEC (Florida East Coast / Brightline) = ORANGE  #f97316
 // ══════════════════════════════════════════════════════════
 
-const TRACK_CACHE_KEY  = "osmTrackData_v4";
+const TRACK_CACHE_KEY  = "osmTrackData_v5";
 const TRACK_CACHE_DAYS = 60;
 
-// Live arrays used by train interpolation engine (start with fallback)
-let liveCsxPts = csxPts;
-let liveFecPts = fecPts;
+// THE single source of truth — populated from OSM, used for
+// both drawing the lines AND train position interpolation
+let liveCsxPts = [];
+let liveFecPts = [];
 
-// Colored polylines — drawn on map, updated when OSM data loads
-// SFRC = blue (#3b82f6)   FEC = orange (#f97316)
-const sfrcLine = L.polyline(liveCsxPts, {
-  color: "#3b82f6", weight: 5, opacity: 0.9,
-  interactive: false
+// Draw empty polylines now — setLatLngs() fills them when data loads
+const sfrcLine = L.polyline([], {
+  color: "#3b82f6", weight: 6, opacity: 0.95, interactive: false
 }).addTo(map);
 
-const fecLine = L.polyline(liveFecPts, {
-  color: "#f97316", weight: 5, opacity: 0.9,
-  interactive: false
+const fecLine = L.polyline([], {
+  color: "#f97316", weight: 6, opacity: 0.95, interactive: false
 }).addTo(map);
 
-// ORM tile overlay — shows full track detail on top
+// ORM tiles show track detail underneath the colored lines
 const ormLayer = L.tileLayer(
   "https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
-  {
-    attribution: '© <a href="https://openrailwaymap.org">OpenRailwayMap</a>',
-    maxZoom: 19, subdomains: "abc", opacity: 0.6, minZoom: 8,
-  }
+  { attribution:'© <a href="https://openrailwaymap.org">OpenRailwayMap</a>',
+    maxZoom:19, subdomains:"abc", opacity:0.5, minZoom:8 }
 );
 ormLayer.addTo(map);
 
-// Update both polylines + rebuild engine whenever new coords load
-function redrawLivePolylines() {
-  sfrcLine.setLatLngs(liveCsxPts);
-  fecLine.setLatLngs(liveFecPts);
-  rebuildTrackEngine();
+let ormEnabled = true;
+function toggleOrmLayer() {
+  ormEnabled = !ormEnabled;
+  const btn = document.getElementById("btnTrack");
+  if (ormEnabled) {
+    ormLayer.addTo(map); sfrcLine.addTo(map); fecLine.addTo(map);
+    if (btn) { btn.style.borderColor="#00d4ff"; btn.style.color="#00d4ff"; btn.textContent="🛤 TRACK"; }
+  } else {
+    map.removeLayer(ormLayer); map.removeLayer(sfrcLine); map.removeLayer(fecLine);
+    if (btn) { btn.style.borderColor="#334"; btn.style.color="#888"; btn.textContent="🛤 OFF"; }
+  }
 }
 
 function setTrackStatus(msg, col) {
@@ -783,129 +678,160 @@ function setTrackStatus(msg, col) {
   if (el) { el.textContent = msg; el.style.color = col || "#f5a623"; }
 }
 
-let ormEnabled = true;
-function toggleOrmLayer() {
-  ormEnabled = !ormEnabled;
-  const btn = document.getElementById("btnTrack");
-  if (ormEnabled) {
-    ormLayer.addTo(map);
-    sfrcLine.addTo(map); fecLine.addTo(map);
-    if (btn) { btn.style.borderColor="#00d4ff"; btn.style.color="#00d4ff"; btn.textContent="🛤 TRACK"; }
-  } else {
-    map.removeLayer(ormLayer);
-    map.removeLayer(sfrcLine); map.removeLayer(fecLine);
-    if (btn) { btn.style.borderColor="#334"; btn.style.color="#888"; btn.textContent="🛤 OFF"; }
-  }
+// Called once OSM data is loaded — updates both the visible line
+// AND the interpolation engine from the same array
+function applyTrackData(csxPts, fecPts) {
+  liveCsxPts = csxPts;
+  liveFecPts = fecPts;
+  sfrcLine.setLatLngs(csxPts);  // visible blue line
+  fecLine.setLatLngs(fecPts);   // visible orange line
+  rebuildTrackEngine();          // train positions use same coords
 }
 
-// ── Fetch real track geometry from Overpass ───────────────
-// Queries the SFRC and FEC route relations by ID to get exact
-// node coordinates, then sorts them N→S for interpolation.
+// ── OSM way stitching ─────────────────────────────────────
+// Properly connects OSM way segments end-to-end into a single
+// continuous polyline by matching endpoints greedily.
+function stitchWaysIntoLine(elements) {
+  // Build list of coordinate chains from way geometries
+  let chains = elements
+    .filter(e => e.type === "way" && e.geometry && e.geometry.length >= 2)
+    .map(e => e.geometry.map(n => [n.lat, n.lon]));
+
+  if (!chains.length) return [];
+  if (chains.length === 1) return chains[0];
+
+  // Start with the northernmost chain (highest lat at either end)
+  chains.sort((a, b) => {
+    const maxA = Math.max(a[0][0], a[a.length-1][0]);
+    const maxB = Math.max(b[0][0], b[b.length-1][0]);
+    return maxB - maxA;
+  });
+
+  const result = [...chains[0]];
+  const remaining = chains.slice(1);
+
+  while (remaining.length) {
+    const tail = result[result.length - 1];
+    let bestIdx = 0, bestDist = Infinity, bestFlip = false;
+
+    // Find the chain whose start or end is closest to current tail
+    for (let i = 0; i < remaining.length; i++) {
+      const head = remaining[i][0];
+      const end  = remaining[i][remaining[i].length - 1];
+      const dHead = Math.hypot(tail[0]-head[0], tail[1]-head[1]);
+      const dEnd  = Math.hypot(tail[0]-end[0],  tail[1]-end[1]);
+      if (dHead < bestDist) { bestDist = dHead; bestIdx = i; bestFlip = false; }
+      if (dEnd  < bestDist) { bestDist = dEnd;  bestIdx = i; bestFlip = true;  }
+    }
+
+    // If gap > 0.05° (~3.5 miles) the ways aren't connected — stop
+    if (bestDist > 0.05) break;
+
+    const chain = remaining.splice(bestIdx, 1)[0];
+    const pts   = bestFlip ? [...chain].reverse() : chain;
+    // Skip first point if it duplicates the tail
+    const start = bestDist < 0.0002 ? 1 : 0;
+    result.push(...pts.slice(start));
+  }
+
+  return result;
+}
+
+// ── Overpass fetch ────────────────────────────────────────
 const OVERPASS_URLS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
 ];
 
-// Sort a set of way segments into a continuous N→S polyline
-function sortWaysNtoS(elements) {
-  const ways = elements
-    .filter(e => e.type === "way" && e.geometry && e.geometry.length >= 2)
-    .map(e => e.geometry.map(n => [n.lat, n.lon]));
-  if (!ways.length) return [];
-
-  // Flatten all points, deduplicate nearby ones, sort by lat descending (N→S)
-  const all = ways.flat();
-  all.sort((a, b) => b[0] - a[0]);
-
-  // Deduplicate points within 0.0001° (~10m)
-  const deduped = [all[0]];
-  for (let i = 1; i < all.length; i++) {
-    const prev = deduped[deduped.length - 1];
-    const d = Math.abs(all[i][0] - prev[0]) + Math.abs(all[i][1] - prev[1]);
-    if (d > 0.0001) deduped.push(all[i]);
-  }
-  return deduped;
-}
-
-async function fetchTrackFromOverpass(query) {
+async function fetchOverpass(query) {
   for (const url of OVERPASS_URLS) {
     try {
       const r = await fetch(url, {
         method: "POST",
         body: "data=" + encodeURIComponent(query),
-        signal: AbortSignal.timeout(25000),
+        signal: AbortSignal.timeout(30000),
       });
       if (!r.ok) continue;
       const d = await r.json();
-      if (d.elements && d.elements.length > 0) return d;
-    } catch { /* try next */ }
+      if (d.elements && d.elements.length > 2) return d;
+    } catch(e) { /* try next mirror */ }
   }
   return null;
 }
 
+// ── Main track loader ─────────────────────────────────────
 async function loadOsmTracks() {
   if (location.hostname.includes("claudeusercontent")) {
-    setTrackStatus("🗺 FALLBACK", "#f5a623"); return;
+    setTrackStatus("⚠ PREVIEW — no tracks", "#f5a623"); return;
   }
 
-  // Check cache
+  // Serve from cache if fresh
   try {
-    const c = localStorage.getItem(TRACK_CACHE_KEY);
-    if (c) {
-      const {ts, csx, fec} = JSON.parse(c);
-      if ((Date.now()-ts) < TRACK_CACHE_DAYS*86400000 && csx.length>10 && fec.length>10) {
-        liveCsxPts = csx; liveFecPts = fec;
-        redrawLivePolylines();
-        setTrackStatus("🛤 OSM CACHED", "#00ee77");
+    const raw = localStorage.getItem(TRACK_CACHE_KEY);
+    if (raw) {
+      const {ts, csx, fec} = JSON.parse(raw);
+      const ageDays = (Date.now() - ts) / 86400000;
+      if (ageDays < TRACK_CACHE_DAYS && csx.length > 20 && fec.length > 20) {
+        applyTrackData(csx, fec);
+        setTrackStatus(`🛤 OSM (${Math.floor(ageDays)}d ago)`, "#00ee77");
+        console.log(`Tracks from cache: SFRC ${csx.length}pts, FEC ${fec.length}pts`);
         return;
       }
     }
   } catch(e) {}
 
-  setTrackStatus("⏳ FETCHING TRACKS…", "#f5a623");
+  setTrackStatus("⏳ loading real tracks…", "#f5a623");
 
-  // SFRC: relation 4322238 (Tri-Rail / SFRTA main line)
-  const sfrcQuery = `[out:json][timeout:30];
-relation(4322238);way(r)["railway"="rail"];out geom;`;
+  // Query: get all railway=rail ways that are members of the
+  // SFRC route relation (4322238) or FEC relation (2936327).
+  // "out geom" returns full node coordinates inline.
+  const sfrcQuery = `[out:json][timeout:45];
+relation(4322238);
+way(r)["railway"="rail"];
+out geom;`;
 
-  // FEC: relation 2936327 (Florida East Coast main line)
-  const fecQuery = `[out:json][timeout:30];
-relation(2936327);way(r)["railway"="rail"];out geom;`;
+  const fecQuery = `[out:json][timeout:45];
+relation(2936327);
+way(r)["railway"="rail"];
+out geom;`;
 
-  let gotAny = false;
+  const [sfrcData, fecData] = await Promise.all([
+    fetchOverpass(sfrcQuery),
+    fetchOverpass(fecQuery),
+  ]);
 
-  const sfrcData = await fetchTrackFromOverpass(sfrcQuery);
-  if (sfrcData && sfrcData.elements.length > 5) {
-    const pts = sortWaysNtoS(sfrcData.elements);
-    // Filter to South FL corridor lng band
-    const fl = pts.filter(([,lng]) => lng >= -80.22 && lng <= -80.08);
-    if (fl.length > 10) {
-      liveCsxPts = fl; gotAny = true;
-      console.log("✓ SFRC from OSM:", fl.length, "pts");
-    }
+  let csx = [], fec = [];
+
+  if (sfrcData) {
+    const stitched = stitchWaysIntoLine(sfrcData.elements);
+    // Keep only South FL segment
+    csx = stitched.filter(([lat, lng]) =>
+      lat >= 25.75 && lat <= 26.80 && lng >= -80.22 && lng <= -80.07
+    );
+    console.log(`SFRC stitched: ${stitched.length} → filtered: ${csx.length} pts`);
   }
 
-  const fecData = await fetchTrackFromOverpass(fecQuery);
-  if (fecData && fecData.elements.length > 5) {
-    const pts = sortWaysNtoS(fecData.elements);
-    // Filter to South FL corridor
-    const fl = pts.filter(([lat,lng]) => lat >= 25.7 && lat <= 26.8 && lng >= -80.22 && lng <= -80.03);
-    if (fl.length > 10) {
-      liveFecPts = fl; gotAny = true;
-      console.log("✓ FEC from OSM:", fl.length, "pts");
-    }
+  if (fecData) {
+    const stitched = stitchWaysIntoLine(fecData.elements);
+    fec = stitched.filter(([lat, lng]) =>
+      lat >= 25.75 && lat <= 26.80 && lng >= -80.22 && lng <= -80.03
+    );
+    console.log(`FEC stitched: ${stitched.length} → filtered: ${fec.length} pts`);
   }
 
-  if (gotAny) {
-    redrawLivePolylines();
-    setTrackStatus("🛤 REAL OSM", "#00ee77");
+  if (csx.length > 20 && fec.length > 20) {
+    applyTrackData(csx, fec);
+    setTrackStatus("🛤 REAL OSM TRACKS", "#00ee77");
     try {
-      localStorage.setItem(TRACK_CACHE_KEY, JSON.stringify({
-        ts: Date.now(), csx: liveCsxPts, fec: liveFecPts
-      }));
+      localStorage.setItem(TRACK_CACHE_KEY,
+        JSON.stringify({ ts: Date.now(), csx, fec }));
     } catch(e) {}
+  } else if (csx.length > 20) {
+    applyTrackData(csx, fec.length > 5 ? fec : []);
+    setTrackStatus("🛤 SFRC only", "#f5a623");
   } else {
-    setTrackStatus("🗺 FALLBACK", "#f5a623");
+    setTrackStatus("❌ fetch failed — retry with 🛤", "#e74c3c");
+    console.warn("OSM fetch returned too few points:", csx.length, fec.length);
   }
 }
 
@@ -917,7 +843,8 @@ async function refreshOsmTracks() {
   if (btn) { btn.textContent = "🛤 TRACK"; btn.style.color = "#00d4ff"; }
 }
 
-setTimeout(loadOsmTracks, 800);
+// Load after map is ready
+setTimeout(loadOsmTracks, 600);
 
 // Precompute cumulative arc lengths along a polyline
 function buildTrack(pts) {
@@ -971,11 +898,12 @@ function stationFraction(track, refLat) {
 let csxTrack, fecTrack, csxStatFrac, fecStatFrac;
 
 function rebuildTrackEngine() {
+  if (liveCsxPts.length < 2 || liveFecPts.length < 2) return; // not ready yet
   csxTrack    = buildTrack(liveCsxPts);
   fecTrack    = buildTrack(liveFecPts);
   csxStatFrac = stationFraction(csxTrack, STAT_LAT);
   fecStatFrac = stationFraction(fecTrack, STAT_LAT);
-  console.log(`Track engine rebuilt: CSX statFrac=${csxStatFrac.toFixed(4)}, FEC statFrac=${fecStatFrac.toFixed(4)}`);
+  console.log(`Track engine rebuilt: SFRC ${liveCsxPts.length}pts statFrac=${csxStatFrac.toFixed(4)}, FEC ${liveFecPts.length}pts statFrac=${fecStatFrac.toFixed(4)}`);
 }
 rebuildTrackEngine(); // initial build with fallback data
 
@@ -993,9 +921,9 @@ function speedToFracPerMin(track, mph) {
 function schedPos(t, sM) {
   const track    = t.track === "fec" ? fecTrack : csxTrack;
   const statFrac = t.track === "fec" ? fecStatFrac : csxStatFrac;
+  if (!track) return {lat: STAT_LAT, lng: t.track === "fec" ? -80.092 : -80.134};
   const fpm      = speedToFracPerMin(track, SPEED_MPH[t.type] || 50);
   const diff     = sM - t.mins;
-  // SB trains move toward higher fractions (south end of track)
   const fracOffset = t.dir === "SB" ? diff * fpm : -diff * fpm;
   const frac = Math.max(0, Math.min(1, statFrac + fracOffset));
   return posOnTrack(track, frac);
@@ -1005,6 +933,7 @@ function schedPos(t, sM) {
 function onTrack(t, sM) {
   const track    = t.track === "fec" ? fecTrack : csxTrack;
   const statFrac = t.track === "fec" ? fecStatFrac : csxStatFrac;
+  if (!track) return false; // tracks not loaded yet
   const fpm      = speedToFracPerMin(track, SPEED_MPH[t.type] || 50);
   const diff     = sM - t.mins;
   const fracOffset = t.dir === "SB" ? diff * fpm : -diff * fpm;
