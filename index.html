@@ -366,7 +366,7 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
 
     <!-- MAP -->
     <div id="mapwrap">
-      <div id="map"></div>
+      <div id="map" style="min-height:200px"></div>
       <div id="mapcorner">
         <b id="otcount">0</b> TRAINS IN 50MI CORRIDOR<br>
         🟡 CSX/TRI-RAIL &nbsp;🟠 FEC/BRIGHTLINE
@@ -776,10 +776,64 @@ const fecPts = [
   [25.845,-80.213],
 ];
 
-L.polyline(csxPts,{color:"#000",weight:6,opacity:.45}).addTo(map);
-L.polyline(csxPts,{color:"#ffe066",weight:2.5,opacity:.9}).addTo(map);
-L.polyline(fecPts,{color:"#000",weight:6,opacity:.45}).addTo(map);
-L.polyline(fecPts,{color:"#ff8c00",weight:2.5,opacity:.9}).addTo(map);
+// ── Live polyline objects — redrawn when crossings snap to them ──
+let csxPolyBg  = L.polyline(csxPts,{color:"#000",   weight:6,  opacity:.45}).addTo(map);
+let csxPolyFg  = L.polyline(csxPts,{color:"#ffe066",weight:2.5,opacity:.9 }).addTo(map);
+let fecPolyBg  = L.polyline(fecPts,{color:"#000",   weight:6,  opacity:.45}).addTo(map);
+let fecPolyFg  = L.polyline(fecPts,{color:"#ff8c00",weight:2.5,opacity:.9 }).addTo(map);
+
+// Anchor points collected from OSM crossings, keyed by track
+const anchors = { csx: [], fec: [] };
+
+// ── Snap-to-crossing: rebuild a track injecting OSM anchor points ──────────
+// For each anchor, find which segment of the base polyline it is closest to,
+// then insert it between those two base points so the line passes through it.
+function buildSnappedTrack(basePts, trackAnchors) {
+  if (!trackAnchors.length) return basePts;
+
+  // Work on a copy
+  let pts = basePts.map(p => [...p]);
+
+  // Sort anchors by latitude descending (north→south) to match track direction
+  const sorted = [...trackAnchors].sort((a,b) => b[0] - a[0]);
+
+  for (const anch of sorted) {
+    const [aLat, aLng] = anch;
+    let bestSeg = -1, bestDist = Infinity;
+
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [lat1,lng1] = pts[i], [lat2,lng2] = pts[i+1];
+      // Closest point on segment to anchor
+      const dx = lat2-lat1, dy = lng2-lng1;
+      const lenSq = dx*dx + dy*dy;
+      let t = lenSq > 0 ? ((aLat-lat1)*dx + (aLng-lng1)*dy) / lenSq : 0;
+      t = Math.max(0, Math.min(1, t));
+      const cLat = lat1 + t*dx, cLng = lng1 + t*dy;
+      const dist = Math.hypot(aLat-cLat, aLng-cLng);
+      if (dist < bestDist) { bestDist = dist; bestSeg = i; }
+    }
+
+    // Only snap if anchor is within ~300m of the base line (0.003°)
+    if (bestSeg >= 0 && bestDist < 0.003) {
+      pts.splice(bestSeg + 1, 0, [aLat, aLng]);
+    }
+  }
+  return pts;
+}
+
+function redrawTracks() {
+  const zoom = map.getZoom();
+  // At zoom < 13 just use the base skeleton
+  const csxFinal = zoom >= 13 ? buildSnappedTrack(csxPts, anchors.csx) : csxPts;
+  const fecFinal = zoom >= 13 ? buildSnappedTrack(fecPts, anchors.fec) : fecPts;
+  csxPolyBg.setLatLngs(csxFinal);
+  csxPolyFg.setLatLngs(csxFinal);
+  fecPolyBg.setLatLngs(fecFinal);
+  fecPolyFg.setLatLngs(fecFinal);
+}
+
+// Redraw when zoom changes
+map.on("zoomend", redrawTracks);
 
 // ── Polyline interpolation engine ──────────────────────────
 // Precompute cumulative distances along each track (in degrees, good enough for ~20 miles)
@@ -1027,25 +1081,25 @@ function toggleMode() {
   setTimeout(()=>map.invalidateSize(), 80);
 }
 
-// ── Auto-detect device type on load ───────────────────────
-// Use userAgent + screen width — works reliably for real devices
-// (not the iframe width which is unreliable in previews)
-(function autoDetectDevice() {
+// ── Force map to fill container — defined early so all callers can use it ──
+function fixMapSize() { map.invalidateSize({animate:false}); }
+
+// ── Auto-detect device type — runs after map is sized ─────
+// Delay ensures CSS has applied and map container is measured correctly
+setTimeout(function autoDetectDevice() {
   const ua = navigator.userAgent || "";
   const isMobile = /iPhone|iPad|iPod|Android|Mobile|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-  const isTabletLandscape = !isMobile && window.screen.width >= 900;
-  const isDesktop = !isMobile || isTabletLandscape;
+  const isDesktop = !isMobile;
   if (isDesktop) {
-    // Auto-switch to desktop layout for non-mobile devices
     desktopMode = true;
     document.getElementById("body").classList.add("desktop");
     const btn = document.getElementById("modeBtn");
     btn.textContent = "📱";
     btn.classList.add("on");
-    setTimeout(()=>map.invalidateSize(), 80);
+    setTimeout(fixMapSize, 80);
   }
   console.log(`Device: ${isMobile?"MOBILE":"DESKTOP"} | UA: ${ua.substring(0,50)}`);
-})();
+}, 100);
 // ── Locate / Center button ─────────────────────────────────
 document.getElementById("locateBtn").addEventListener("click", function() {
   const btn = this;
@@ -1121,6 +1175,9 @@ document.getElementById("btnCrossings").addEventListener("click", function() {
     crossingLayer.clearLayers();
     crossingCache = {};
     lastFetchBounds = null;
+    anchors.csx = [];
+    anchors.fec = [];
+    redrawTracks();
     this.classList.remove("on");
     this.textContent = "⚠️ XING";
   }
@@ -1317,6 +1374,9 @@ async function fetchCrossingsForView() {
     crossingLayer.clearLayers();
     crossingCache = {};
     lastFetchBounds = null;
+    anchors.csx = [];
+    anchors.fec = [];
+    redrawTracks();
     return;
   }
 
@@ -1351,18 +1411,19 @@ out body;`;
 
   lastFetchBounds = bounds.pad(pad);
 
+  let newAnchors = 0;
   for (const node of data.elements) {
     const key = `${node.lat.toFixed(4)},${node.lon.toFixed(4)}`;
-    if (crossingCache[key]) continue; // already on map
+    if (crossingCache[key]) continue;
     crossingCache[key] = true;
 
     const tags = node.tags || {};
-    const roadName   = tags["name"] || tags["ref"] || "";
-    const barriers   = tags["crossing:barrier"] ? `🚧 ${tags["crossing:barrier"]}` : "";
-    const lights     = tags["crossing:light"] === "yes" ? "🚦 Lights" : "";
-    const bells      = tags["crossing:bell"]  === "yes" ? "🔔 Bell"   : "";
-    const supervision= tags["crossing:supervision"] || "";
-    const safety     = [barriers, lights, bells].filter(Boolean).join(" · ") || "⚠️ Uncontrolled";
+    const roadName    = tags["name"] || tags["ref"] || "";
+    const barriers    = tags["crossing:barrier"] ? `🚧 ${tags["crossing:barrier"]}` : "";
+    const lights      = tags["crossing:light"] === "yes" ? "🚦 Lights" : "";
+    const bells       = tags["crossing:bell"]  === "yes" ? "🔔 Bell"   : "";
+    const supervision = tags["crossing:supervision"] || "";
+    const safety      = [barriers, lights, bells].filter(Boolean).join(" · ") || "⚠️ Uncontrolled";
 
     const popHtml = `
       <div style="font-size:8px;letter-spacing:1px;color:#f5a623;margin-bottom:3px">⚠️ RAILWAY CROSSING</div>
@@ -1375,9 +1436,36 @@ out body;`;
       .bindPopup(`<div style="border-left:3px solid #f5a623;padding-left:8px">${popHtml}</div>`,
         {maxWidth:220})
       .addTo(crossingLayer);
+
+    // ── Classify as CSX or FEC anchor by proximity ──────────────
+    const distToTrack = (pts) => {
+      let best = Infinity;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [lat1,lng1] = pts[i], [lat2,lng2] = pts[i+1];
+        const dx=lat2-lat1, dy=lng2-lng1, lenSq=dx*dx+dy*dy;
+        let t = lenSq>0 ? ((node.lat-lat1)*dx+(node.lon-lng1)*dy)/lenSq : 0;
+        t = Math.max(0,Math.min(1,t));
+        const d = Math.hypot(node.lat-(lat1+t*dx), node.lon-(lng1+t*dy));
+        if (d < best) best = d;
+      }
+      return best;
+    };
+    const dCsx = distToTrack(csxPts);
+    const dFec = distToTrack(fecPts);
+    // Only anchor if clearly near one track (within ~200m ≈ 0.002°)
+    if (dCsx < dFec && dCsx < 0.002) {
+      anchors.csx.push([node.lat, node.lon]);
+      newAnchors++;
+    } else if (dFec <= dCsx && dFec < 0.002) {
+      anchors.fec.push([node.lat, node.lon]);
+      newAnchors++;
+    }
   }
+
   if (data.elements.length)
-    console.log(`✓ +${data.elements.length} crossings loaded (zoom ${zoom})`);
+    console.log(`✓ +${data.elements.length} crossings, +${newAnchors} anchors (zoom ${zoom})`);
+
+  if (newAnchors > 0) redrawTracks();
 }
 
 // Debounce — wait 600ms after zoom/pan stops before fetching
@@ -1692,6 +1780,13 @@ document.getElementById("listscroll").addEventListener("click", function(e) {
 });
 
 requestAnimationFrame(render);
+
+// ── Force map to fill its container after layout settles ──
+setTimeout(fixMapSize, 0);
+setTimeout(fixMapSize, 50);
+setTimeout(fixMapSize, 200);
+setTimeout(fixMapSize, 500);
+window.addEventListener("resize", fixMapSize);
 
 }; // end window.onload
 
