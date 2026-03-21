@@ -739,11 +739,11 @@ function applyTrackData(csx, fec) {
 setTimeout(() => { rebuildTrackEngine(); }, 1000);
 
 // ── OSM fetch (upgrades fallback to real geometry) ────────
-const TRACK_CACHE_KEY  = "osmTrackData_v7";
+const TRACK_CACHE_KEY  = "osmTrackData_v8";
 const TRACK_CACHE_DAYS = 60;
 
 // Clear any old broken cache versions on startup
-["osmTrackData_v3","osmTrackData_v4","osmTrackData_v5","osmTrackData_v6"].forEach(k=>{
+["osmTrackData_v3","osmTrackData_v4","osmTrackData_v5","osmTrackData_v6","osmTrackData_v7"].forEach(k=>{
   try{localStorage.removeItem(k);}catch(e){}
 });
 const OVERPASS_URLS = [
@@ -807,8 +807,8 @@ async function loadOsmTracks() {
   }catch(e){}
 
   setTrackStatus("⏳ loading OSM…","#f5a623");
-  const sfrcQ=`[out:json][timeout:45];relation(4322238);way(r)["railway"="rail"];out geom;`;
-  const fecQ=`[out:json][timeout:45];relation(2936327);way(r)["railway"="rail"];out geom;`;
+  const sfrcQ=`[out:json][timeout:45];relation(2203671);way(r)["railway"="rail"];out geom;`;
+  const fecQ=`[out:json][timeout:45];relation(7405045);way(r)["railway"="rail"];out geom;`;
   const [sfrcData,fecData]=await Promise.all([fetchOverpass(sfrcQ),fetchOverpass(fecQ)]);
 
   let csx=null,fec=null;
