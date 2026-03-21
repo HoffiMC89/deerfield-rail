@@ -969,19 +969,20 @@ function stationFraction(track, refLat) {
 
 // Mutable track state — rebuilt when OSM data loads
 let csxTrack, fecTrack, csxStatFrac, fecStatFrac;
-// Original Deerfield Beach fractions — used to compute time offsets for other stations
-const ORIG_STAT_LAT = 26.3168;
-let csxOrigFrac, fecOrigFrac;
+// Station fractions for the SELECTED station (used for time adjustment display)
+let csxPickedFrac, fecPickedFrac;
 
 function rebuildTrackEngine() {
   if (liveCsxPts.length < 2 || liveFecPts.length < 2) return; // not ready yet
   csxTrack    = buildTrack(liveCsxPts);
   fecTrack    = buildTrack(liveFecPts);
-  csxOrigFrac = stationFraction(csxTrack, ORIG_STAT_LAT);
-  fecOrigFrac = stationFraction(fecTrack, ORIG_STAT_LAT);
-  csxStatFrac = stationFraction(csxTrack, STAT_LAT);
-  fecStatFrac = stationFraction(fecTrack, STAT_LAT);
-  console.log(`Track engine rebuilt: SFRC ${liveCsxPts.length}pts statFrac=${csxStatFrac.toFixed(4)}, FEC ${liveFecPts.length}pts statFrac=${fecStatFrac.toFixed(4)}`);
+  // These ALWAYS use Deerfield Beach (26.3168) — they anchor the schedule simulation
+  csxStatFrac = stationFraction(csxTrack, 26.3168);
+  fecStatFrac = stationFraction(fecTrack, 26.3168);
+  // These use the SELECTED station — for time offset calculations
+  csxPickedFrac = stationFraction(csxTrack, STAT_LAT);
+  fecPickedFrac = stationFraction(fecTrack, STAT_LAT);
+  console.log(`Track engine rebuilt: SFRC ${liveCsxPts.length}pts deerfieldFrac=${csxStatFrac.toFixed(4)} pickedFrac=${csxPickedFrac.toFixed(4)}, FEC ${liveFecPts.length}pts deerfieldFrac=${fecStatFrac.toFixed(4)} pickedFrac=${fecPickedFrac.toFixed(4)}`);
 }
 rebuildTrackEngine(); // initial build with fallback data
 
@@ -989,13 +990,13 @@ rebuildTrackEngine(); // initial build with fallback data
 function stationMins(t) {
   const track = t.track === "fec" ? fecTrack : csxTrack;
   if (!track) return t.mins;
-  const origFrac = t.track === "fec" ? fecOrigFrac : csxOrigFrac;
-  const newFrac  = t.track === "fec" ? fecStatFrac : csxStatFrac;
+  const deerfieldFrac = t.track === "fec" ? fecStatFrac : csxStatFrac;
+  const pickedFrac    = t.track === "fec" ? fecPickedFrac : csxPickedFrac;
   const fpm = speedToFracPerMin(track, SPEED_MPH[t.type] || 50);
   if (!fpm) return t.mins;
   // SB goes south (fraction increases), NB goes north (fraction decreases)
-  // Positive fracDiff = new station is further south
-  const fracDiff = newFrac - origFrac;
+  // Positive fracDiff = picked station is further south than Deerfield
+  const fracDiff = pickedFrac - deerfieldFrac;
   const timeDiff = t.dir === "SB" ? fracDiff / fpm : -fracDiff / fpm;
   let adj = t.mins + timeDiff;
   if (adj < 0) adj += 1440;
