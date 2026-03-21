@@ -509,8 +509,8 @@ const STATIONS = [
   {name:"Golden Glades",   lat:26.0100, lng:-80.1720, statLat:26.0100},
   {name:"Miami Airport",   lat:25.7950, lng:-80.2940, statLat:25.7950},
 ];
-const savedStation = localStorage.getItem("rail_station") || "Deerfield Beach";
-const initStation  = STATIONS.find(s=>s.name===savedStation) || STATIONS[6];
+let curStationName = localStorage.getItem("rail_station") || "Deerfield Beach";
+const initStation  = STATIONS.find(s=>s.name===curStationName) || STATIONS[6];
 let YOU_LAT = initStation.lat, YOU_LNG = initStation.lng;
 let STAT_LAT= initStation.statLat, STAT_LNG= initStation.lng;
 const MAP_N   = 30.40,     MAP_S   = 25.75;
@@ -969,16 +969,45 @@ function stationFraction(track, refLat) {
 
 // Mutable track state — rebuilt when OSM data loads
 let csxTrack, fecTrack, csxStatFrac, fecStatFrac;
+// Original Deerfield Beach fractions — used to compute time offsets for other stations
+const ORIG_STAT_LAT = 26.3168;
+let csxOrigFrac, fecOrigFrac;
 
 function rebuildTrackEngine() {
   if (liveCsxPts.length < 2 || liveFecPts.length < 2) return; // not ready yet
   csxTrack    = buildTrack(liveCsxPts);
   fecTrack    = buildTrack(liveFecPts);
+  csxOrigFrac = stationFraction(csxTrack, ORIG_STAT_LAT);
+  fecOrigFrac = stationFraction(fecTrack, ORIG_STAT_LAT);
   csxStatFrac = stationFraction(csxTrack, STAT_LAT);
   fecStatFrac = stationFraction(fecTrack, STAT_LAT);
   console.log(`Track engine rebuilt: SFRC ${liveCsxPts.length}pts statFrac=${csxStatFrac.toFixed(4)}, FEC ${liveFecPts.length}pts statFrac=${fecStatFrac.toFixed(4)}`);
 }
 rebuildTrackEngine(); // initial build with fallback data
+
+// Adjusted arrival minutes at the selected station (schedule times are for Deerfield Beach)
+function stationMins(t) {
+  const track = t.track === "fec" ? fecTrack : csxTrack;
+  if (!track) return t.mins;
+  const origFrac = t.track === "fec" ? fecOrigFrac : csxOrigFrac;
+  const newFrac  = t.track === "fec" ? fecStatFrac : csxStatFrac;
+  const fpm = speedToFracPerMin(track, SPEED_MPH[t.type] || 50);
+  if (!fpm) return t.mins;
+  // SB goes south (fraction increases), NB goes north (fraction decreases)
+  // Positive fracDiff = new station is further south
+  const fracDiff = newFrac - origFrac;
+  const timeDiff = t.dir === "SB" ? fracDiff / fpm : -fracDiff / fpm;
+  let adj = t.mins + timeDiff;
+  if (adj < 0) adj += 1440;
+  if (adj >= 1440) adj -= 1440;
+  return adj;
+}
+// Format minutes since midnight to HH:MM
+function minsToTime(m) {
+  const h = Math.floor(((m % 1440) + 1440) % 1440 / 60);
+  const min = Math.floor(((m % 1440) + 1440) % 1440 % 60);
+  return String(h).padStart(2,"0") + ":" + String(min).padStart(2,"0");
+}
 
 // Speed constants for schedule-based trains (mph)
 const SPEED_MPH = {tri:55, amtrak:60, brightline:90, fec:45, csx:40};
@@ -1578,7 +1607,7 @@ document.getElementById("btnFullscreen").addEventListener("click", function() {
     const opt = document.createElement("option");
     opt.value = s.name;
     opt.textContent = "📍 " + s.name;
-    if (s.name === savedStation || (!savedStation && s.name === "Deerfield Beach")) opt.selected = true;
+    if (s.name === curStationName || (!curStationName && s.name === "Deerfield Beach")) opt.selected = true;
     sel.appendChild(opt);
   });
   sel.addEventListener("change", function() {
@@ -1586,6 +1615,7 @@ document.getElementById("btnFullscreen").addEventListener("click", function() {
     if (!st) return;
     YOU_LAT = st.lat; YOU_LNG = st.lng;
     STAT_LAT = st.statLat; STAT_LNG = st.lng;
+    curStationName = st.name;
     localStorage.setItem("rail_station", st.name);
     // Update banner label
     const short = st.name.length > 15 ? st.name.slice(0,13) + "…" : st.name.toUpperCase();
@@ -1675,7 +1705,7 @@ function render() {
     const pop = `
       <span style="color:${col};font-size:8px;letter-spacing:1px">${t.cat.toUpperCase()} · ${t.dir==="SB"?"↓ SOUTH":"↑ NORTH"}</span><br>
       <b style="color:#fff;font-size:14px">${emoji} ${t.train}</b><br>
-      <span style="color:#6a8090;font-size:9px">Deerfield Beach: ${t.time}</span><br>
+      <span style="color:#6a8090;font-size:9px">${curStationName || "Deerfield Beach"}: ${minsToTime(stationMins(t))}</span><br>
       <span style="color:#a78bfa;font-size:11px;font-weight:bold">~ ${spd} mph</span><br>
       ${cargo?"<span style=\"color:#ffb347;font-size:9px\">"+cargo+"</span><br>":""}
       <span style="color:#f5a623;font-size:9px">📅 SCHEDULE-BASED</span>`;
@@ -1716,14 +1746,16 @@ function render() {
     otbar.style.display="none";
   }
 
-  // ── Next train ─────────────────────────────────────────
+  // ── Next train (adjusted for selected station) ────────
   const filt     = ALL.filter(t=>curFilter==="all"||t.type===curFilter);
-  const upcoming = filt.filter(t=>t.mins>sM);
-  const next     = upcoming[0] ?? filt[0];
+  const withAdj  = filt.map(t=>({...t, adjMins:stationMins(t), adjTime:minsToTime(stationMins(t))}))
+    .sort((a,b)=>a.adjMins-b.adjMins);
+  const upcoming = withAdj.filter(t=>t.adjMins>sM);
+  const next     = upcoming[0] ?? withAdj[0];
   if (next) {
-    const dn  = next.mins>sM ? next.mins-sM : next.mins+1440-sM;
+    const dn  = next.adjMins>sM ? next.adjMins-sM : next.adjMins+1440-sM;
     const col = tCol(next);
-    document.getElementById("ntime").textContent  = next.time;
+    document.getElementById("ntime").textContent  = next.adjTime;
     document.getElementById("ntrain").textContent = `${tEmoji(next)} ${next.train}`;
     document.getElementById("ntrain").style.color = col;
     document.getElementById("nmeta").textContent  =
@@ -1732,7 +1764,7 @@ function render() {
   }
 
   // ── Schedule list ──────────────────────────────────────
-  const passed = filt.filter(t=>t.mins<=sM-1);
+  const passed = withAdj.filter(t=>t.adjMins<=sM-1);
   let html = "";
 
   if (upcoming.length) {
@@ -1749,7 +1781,7 @@ function render() {
       html += `<div class="trow" id="row-${schId}" data-trainid="${schId}"
           style="${ot?'background:'+col+'0d;border-color:'+col+'44':''}">
         ${logoHtml}
-        <div class="ttime">${t.time}</div>
+        <div class="ttime">${t.adjTime}</div>
         <div class="tinfo">
           <div class="tname" style="color:${col}">${tEmoji(t)} ${t.train}</div>
           <div class="tmeta">${t.dir==="SB"?"↓":"↑"} ${t.cat} · ${t.track==="fec"?"FEC":"CSX"} · <span style="color:#a78bfa">~${spd}mph</span></div>
@@ -1765,7 +1797,7 @@ function render() {
     passed.slice(-10).reverse().forEach(t => {
       html += `<div class="prow">
         <div class="pdot"></div>
-        <div class="ptime">${t.time}</div>
+        <div class="ptime">${t.adjTime}</div>
         <div class="pname">${tEmoji(t)} ${t.train}</div>
         <div class="pdir">${t.dir==="SB"?"↓":"↑"}</div>
       </div>`;
