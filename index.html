@@ -1493,6 +1493,79 @@ function toggleWeather() {
 }
 
 // ══════════════════════════════════════════════════════════
+// NWS SEVERE WEATHER ALERTS — api.weather.gov (free, CORS-enabled)
+// Shows active alerts relevant to the South Florida rail corridor
+// ══════════════════════════════════════════════════════════
+const alertLayer = L.layerGroup().addTo(map);
+let lastAlertFetch = 0;
+
+async function fetchWeatherAlerts() {
+  try {
+    // Fetch alerts for the corridor area (Broward + Palm Beach + Miami-Dade counties)
+    const r = await fetch("https://api.weather.gov/alerts/active?area=FL&status=actual&severity=Severe,Extreme", {
+      headers: {"Accept":"application/geo+json", "User-Agent":"DeerFieldRailTracker/1.0"},
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    alertLayer.clearLayers();
+
+    const corridorAlerts = (data.features || []).filter(f => {
+      const zones = (f.properties.geocode?.UGC || []).join(",");
+      // South FL counties: Broward (FLC011), Palm Beach (FLC099), Miami-Dade (FLC086)
+      return /FLC011|FLC099|FLC086|FLZ172|FLZ173|FLZ174|FLZ068|FLZ072|FLZ076/.test(zones)
+        || (f.properties.areaDesc || "").match(/Broward|Palm Beach|Miami-Dade|Deerfield|Fort Lauderdale/i);
+    });
+
+    for (const f of corridorAlerts) {
+      const p = f.properties;
+      const severity = p.severity || "Unknown";
+      const col = severity === "Extreme" ? "#ff0000" : severity === "Severe" ? "#ff6600" : "#ffcc00";
+      const icon = severity === "Extreme" ? "🔴" : severity === "Severe" ? "🟠" : "🟡";
+
+      // Draw polygon if geometry exists
+      if (f.geometry && f.geometry.coordinates) {
+        try {
+          L.geoJSON(f.geometry, {
+            style: {color: col, weight: 2, fillColor: col, fillOpacity: 0.08, dashArray: "5,5"}
+          }).bindPopup(`<div style="border-left:3px solid ${col};padding-left:8px;max-width:280px">
+            <div style="font-size:8px;color:${col};letter-spacing:1px">${icon} NWS ALERT</div>
+            <b style="color:#fff;font-size:12px">${p.event}</b><br>
+            <span style="color:#aaa;font-size:9px">${p.headline || ""}</span><br>
+            <span style="color:#6a8090;font-size:8px">Severity: ${severity} · ${p.areaDesc || ""}</span>
+          </div>`, {maxWidth: 300}).addTo(alertLayer);
+        } catch(e) {}
+      }
+
+      // Also show a banner-style marker at corridor center
+      const bannerLat = 26.31, bannerLng = -80.13;
+      L.marker([bannerLat, bannerLng], {
+        icon: L.divIcon({
+          html: `<div style="background:${col}22;border:1px solid ${col};border-radius:6px;padding:3px 8px;
+            font-size:9px;color:${col};font-family:monospace;white-space:nowrap;font-weight:bold;
+            backdrop-filter:blur(4px)">${icon} ${p.event}</div>`,
+          className:"", iconSize:[200,24], iconAnchor:[100,12]
+        }), zIndexOffset: 3000
+      }).bindPopup(`<div style="border-left:3px solid ${col};padding-left:8px;max-width:280px">
+        <div style="font-size:8px;color:${col};letter-spacing:1px">${icon} NWS ALERT</div>
+        <b style="color:#fff;font-size:13px">${p.event}</b><br>
+        <span style="color:#ccc;font-size:10px">${p.headline || ""}</span><br>
+        <span style="color:#aaa;font-size:9px">${(p.description || "").slice(0,300)}${(p.description||"").length>300?"…":""}</span><br>
+        <span style="color:#6a8090;font-size:8px">Severity: ${severity} · Expires: ${p.expires ? new Date(p.expires).toLocaleTimeString() : "?"}</span>
+      </div>`, {maxWidth: 300}).addTo(alertLayer);
+    }
+
+    if (corridorAlerts.length) console.log(`⚠️ ${corridorAlerts.length} NWS alerts active for corridor`);
+    lastAlertFetch = Date.now();
+  } catch(e) {
+    console.warn("NWS alert fetch error:", e);
+  }
+}
+// Fetch alerts every 5 minutes
+fetchWeatherAlerts();
+setInterval(fetchWeatherAlerts, 300000);
+
+// ══════════════════════════════════════════════════════════
 // FEATURE 15 — TRIP HISTORY / TRAIN LOG
 // Auto-logs trains that pass within ~0.5mi of user position
 // Also stores manual entries via the log button
