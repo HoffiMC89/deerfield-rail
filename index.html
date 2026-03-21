@@ -34,6 +34,11 @@
       sessionStorage.setItem(KEY, "1");
       document.getElementById("lockscreen").style.display = "none";
       document.getElementById("app").style.display = "flex";
+      // Fix map rendering after unlock — Leaflet inits with 0-size container when hidden
+      setTimeout(function(){
+        if(window.map) window.map.invalidateSize({animate:false});
+        if(typeof autoDetectAndFix==="function") autoDetectAndFix();
+      }, 100);
     } else {
       err.textContent = "Wrong password — try again";
       input.value = "";
@@ -154,9 +159,9 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   #liveindicator{font-size:9px}
   /* BODY: stacked column */
   #body{display:flex;flex:1;overflow:hidden;flex-direction:column;min-height:0}
-  /* MAP: fixed 220px height */
+  /* MAP: fixed 275px height (25% more than 220) */
   #mapwrap{width:100%}
-  #map{height:220px}
+  #map{height:275px}
   #mapcorner{padding:3px 7px;font-size:6.5px}
   #apistatus{padding:3px 7px;font-size:6.5px}
   #layertoggle button{padding:3px 7px;font-size:8px;min-height:26px}
@@ -307,6 +312,31 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   padding:3px 7px;font-size:8px;border-radius:4px;min-height:26px}
 #btnWeather.on{border-color:#60a5fa;color:#60a5fa;background:#0d1a2e}
 
+/* ── Fullscreen map mode ── */
+#app.fullscreen-map #hdr,#app.fullscreen-map #panel{display:none!important}
+#app.fullscreen-map #body{flex-direction:column!important}
+#app.fullscreen-map #mapwrap{width:100%!important;height:100%!important;flex:1!important}
+#app.fullscreen-map #map{height:100%!important}
+#btnFullscreen{position:absolute;bottom:20px;left:6px;z-index:1000;
+  background:rgba(5,8,18,.92);border:1px solid #334;color:#aaa;
+  padding:5px 9px;border-radius:5px;font-size:14px;min-height:32px;
+  box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer}
+#btnFullscreen.on{border-color:#f5a623;color:#f5a623}
+
+/* ── Follow indicator ── */
+#followBadge{position:absolute;top:36px;left:50%;transform:translateX(-50%);z-index:1000;
+  background:rgba(245,166,35,.15);border:1px solid #f5a623;border-radius:20px;
+  padding:3px 12px;font-size:9px;color:#f5a623;letter-spacing:1px;font-family:monospace;
+  pointer-events:auto;cursor:pointer;display:none;white-space:nowrap}
+#followBadge.active{display:block}
+
+/* ── Station picker ── */
+#stationPicker{position:absolute;top:36px;right:5px;z-index:1000;
+  background:rgba(5,8,18,.92);border:1px solid #18243a;border-radius:5px;
+  padding:0;font-family:monospace;font-size:9px;color:#c8d6e5;
+  outline:none;cursor:pointer;max-width:140px}
+@media(min-width:900px){#stationPicker{font-size:11px;max-width:200px;top:42px}}
+
 
 .leaflet-popup-content-wrapper{background:#0a0e1a!important;border:1px solid #1e2d4a!important;
   border-radius:8px!important;box-shadow:0 4px 20px rgba(0,0,0,.8)!important;color:#c8d6e5!important}
@@ -373,15 +403,19 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         🟡 CSX/TRI-RAIL &nbsp;🟠 FEC/BRIGHTLINE
       </div>
       <div id="apistatus">⏳ LOADING…</div>
-      <div id="trackstatus" style="position:absolute;bottom:48px;left:6px;z-index:1000;
+      <div id="trackstatus" style="position:absolute;bottom:90px;left:6px;z-index:1000;
         background:rgba(5,8,18,.88);border:1px solid #18243a;border-radius:5px;
         padding:3px 7px;font-size:7px;letter-spacing:1px;pointer-events:none;
         color:#f5a623;font-family:monospace">🗺 TRACK DATA…</div>
-      <!-- locate button — bottom left -->
-      <button id="locateBtn" style="position:absolute;bottom:52px;left:6px;z-index:1000;
-        background:rgba(5,8,18,.92);border:1px solid #00ee77;color:#00ee77;
-        padding:5px 9px;border-radius:5px;font-size:14px;min-height:32px;
-        box-shadow:0 2px 8px rgba(0,0,0,.5)" title="Center on my location">📍</button>
+      <!-- left-side map buttons — stacked vertically -->
+      <div style="position:absolute;bottom:20px;left:6px;z-index:1000;display:flex;flex-direction:column;gap:4px">
+        <button id="locateBtn" style="background:rgba(5,8,18,.92);border:1px solid #00ee77;color:#00ee77;
+          padding:5px 9px;border-radius:5px;font-size:14px;min-height:32px;
+          box-shadow:0 2px 8px rgba(0,0,0,.5)" title="Center on my location">📍</button>
+        <button id="btnFullscreen" title="Fullscreen map">⛶</button>
+      </div>
+      <div id="followBadge">🎯 FOLLOWING — tap to stop</div>
+      <select id="stationPicker"></select>
       <div id="layertoggle">
         <button id="btnOrm" class="on">🛤 ORM</button>
         <button id="btnSat">🛰 SAT</button>
@@ -448,8 +482,26 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
 // ══════════════════════════════════════════════════════════
 // GEOGRAPHY
 // ══════════════════════════════════════════════════════════
-const YOU_LAT = 26.310540, YOU_LNG = -80.128932;
-const STAT_LAT= 26.3168,   STAT_LNG= -80.1222;
+const STATIONS = [
+  {name:"Mangonia Park",   lat:26.7420, lng:-80.1120, statLat:26.7420},
+  {name:"West Palm Beach", lat:26.7150, lng:-80.0540, statLat:26.7150},
+  {name:"Lake Worth",      lat:26.6200, lng:-80.0580, statLat:26.6200},
+  {name:"Boynton Beach",   lat:26.5350, lng:-80.0730, statLat:26.5350},
+  {name:"Delray Beach",    lat:26.4610, lng:-80.0800, statLat:26.4610},
+  {name:"Boca Raton",      lat:26.3750, lng:-80.0880, statLat:26.3750},
+  {name:"Deerfield Beach", lat:26.3168, lng:-80.1222, statLat:26.3168},
+  {name:"Pompano Beach",   lat:26.2720, lng:-80.1350, statLat:26.2720},
+  {name:"Cypress Creek",   lat:26.2390, lng:-80.1370, statLat:26.2390},
+  {name:"Ft Lauderdale",   lat:26.1430, lng:-80.1430, statLat:26.1430},
+  {name:"Hollywood",       lat:26.1180, lng:-80.1450, statLat:26.1180},
+  {name:"Sheridan St",     lat:26.1020, lng:-80.1470, statLat:26.1020},
+  {name:"Golden Glades",   lat:26.0100, lng:-80.1720, statLat:26.0100},
+  {name:"Miami Airport",   lat:25.7950, lng:-80.2940, statLat:25.7950},
+];
+const savedStation = localStorage.getItem("rail_station") || "Deerfield Beach";
+const initStation  = STATIONS.find(s=>s.name===savedStation) || STATIONS[6];
+let YOU_LAT = initStation.lat, YOU_LNG = initStation.lng;
+let STAT_LAT= initStation.statLat, STAT_LNG= initStation.lng;
 const MAP_N   = 30.40,     MAP_S   = 25.75;
 
 // ══════════════════════════════════════════════════════════
@@ -574,9 +626,9 @@ const LOGOS = {
   const winH = window.innerHeight;
   const winW = window.innerWidth;
   if (isMobile) {
-    // Mobile: map is 220px fixed
+    // Mobile: map is 275px fixed (25% more visible area)
     wrap.style.width  = "100%";
-    wrap.style.height = "220px";
+    wrap.style.height = "275px";
   } else {
     // Desktop: map is 65% wide, full remaining height
     wrap.style.width  = Math.floor(winW * 0.65) + "px";
@@ -587,11 +639,12 @@ const LOGOS = {
 })();
 
 const map = L.map("map", {
-  center: [26.31, -80.13],  // Deerfield Beach area
+  center: [initStation.lat, initStation.lng],
   zoom: 11,
   zoomControl: true,
   attributionControl: true,
 });
+window.map = map;
 
 const LAYERS = {
   orm:  L.tileLayer("https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
@@ -1495,6 +1548,52 @@ document.getElementById("listscroll").addEventListener("pointerup", function(e) 
 });
 document.getElementById("listscroll").addEventListener("click", e => e.stopPropagation());
 
+// ── Follow badge — tap to stop following ──
+document.getElementById("followBadge").addEventListener("click", stopFollow);
+
+// ── Fullscreen map toggle ──
+document.getElementById("btnFullscreen").addEventListener("click", function() {
+  const app = document.getElementById("app");
+  app.classList.toggle("fullscreen-map");
+  this.classList.toggle("on");
+  this.textContent = app.classList.contains("fullscreen-map") ? "✕" : "⛶";
+  setTimeout(() => map.invalidateSize({animate:false}), 50);
+});
+
+// ── Station picker — populate and handle changes ──
+(function initStationPicker() {
+  const sel = document.getElementById("stationPicker");
+  STATIONS.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s.name;
+    opt.textContent = "📍 " + s.name;
+    if (s.name === savedStation || (!savedStation && s.name === "Deerfield Beach")) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener("change", function() {
+    const st = STATIONS.find(s => s.name === this.value);
+    if (!st) return;
+    YOU_LAT = st.lat; YOU_LNG = st.lng;
+    STAT_LAT = st.statLat; STAT_LNG = st.lng;
+    localStorage.setItem("rail_station", st.name);
+    // Update banner label
+    const short = st.name.length > 15 ? st.name.slice(0,13) + "…" : st.name.toUpperCase();
+    document.querySelector(".nlabel").textContent = "⚡ NEXT AT " + short;
+    // Rebuild track fractions for new station
+    rebuildTrackEngine();
+    // Center map on new station
+    map.setView([st.lat, st.lng], 12, {animate:true});
+  });
+  // Set initial banner
+  if (initStation.name !== "Deerfield Beach") {
+    const short = initStation.name.length > 15 ? initStation.name.slice(0,13) + "…" : initStation.name.toUpperCase();
+    document.querySelector(".nlabel").textContent = "⚡ NEXT AT " + short;
+  }
+})();
+
+// ── Stop follow on manual map interaction ──
+map.on("dragstart", stopFollow);
+
 const pad   = n => String(Math.floor(Math.abs(n))).padStart(2,"0");
 const fmtT  = d => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 const DAYS  = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
@@ -1574,6 +1673,13 @@ function render() {
   }
 
   cullMarkers(keepIds);
+
+  // Follow selected train — keep camera locked on it
+  if (followId && markers[followId]) {
+    map.panTo(markers[followId].getLatLng(), {animate:true, duration:0.3, noMoveStart:true});
+  } else if (followId && !markers[followId]) {
+    stopFollow(); // train left the track
+  }
 
   // Auto-log passing trains (feature 15)
   checkPassingTrains(sM);
@@ -1661,21 +1767,33 @@ function render() {
 
 // ── List ↔ Map cross-linking ───────────────────────────────
 let selectedId = null;
+let followId = null; // train ID being followed (camera locked)
+
+function stopFollow() {
+  followId = null;
+  document.getElementById("followBadge").classList.remove("active");
+}
+
+function startFollow(id) {
+  followId = id;
+  document.getElementById("followBadge").classList.add("active");
+}
 
 function selectTrain(id) {
   // Toggle off same train
   if (selectedId === id) {
     if (markers[id]) markers[id].closePopup();
     unhighlightRow(id);
+    stopFollow();
     return;
   }
   // Close previous popup
   if (selectedId && markers[selectedId]) markers[selectedId].closePopup();
 
   highlightRow(id);
+  startFollow(id);
 
   if (markers[id]) {
-    // Pan to marker then open popup
     map.panTo(markers[id].getLatLng(), {animate:true, duration:0.35});
     setTimeout(() => { if (markers[id]) markers[id].openPopup(); }, 380);
   }
