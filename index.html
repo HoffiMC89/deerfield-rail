@@ -346,6 +346,27 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
   box-shadow:0 2px 8px rgba(0,0,0,.4)}
 #stationPicker option{background:#0b1020;color:#fff}
+
+/* ── Welcome overlay ── */
+#welcomeOverlay{display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,.7);
+  align-items:center;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#welcomeOverlay.open{display:flex}
+#welcomeBox{background:#0b1020;border:1px solid #1e2d4a;border-radius:14px;padding:28px 24px;
+  max-width:380px;width:90%;font-family:'Courier New',monospace;color:#c8d6e5;
+  box-shadow:0 8px 40px rgba(0,0,0,.7);max-height:90vh;overflow-y:auto}
+#welcomeBox h2{margin:0 0 4px;font-size:16px;color:#fff;letter-spacing:3px;text-align:center}
+#welcomeBox .wsub{font-size:9px;color:#3a5060;text-align:center;letter-spacing:2px;margin-bottom:16px}
+#welcomeBox ul{list-style:none;padding:0;margin:0 0 18px}
+#welcomeBox li{padding:7px 0;font-size:11px;border-bottom:1px solid #18243a;display:flex;gap:8px;align-items:flex-start}
+#welcomeBox li:last-child{border-bottom:none}
+#welcomeBox li span.wicon{font-size:16px;flex-shrink:0;width:22px;text-align:center}
+#welcomeBox li span.wtxt{flex:1}
+#welcomeBox li b{color:#fff}
+#welcomeBtn{display:block;width:100%;padding:12px;background:#f5a623;border:none;color:#000;
+  font-family:monospace;font-size:13px;font-weight:bold;letter-spacing:2px;border-radius:8px;
+  cursor:pointer}
+#welcomeBox .wcheck{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:9px;color:#3a5060}
+#welcomeBox .wcheck input{accent-color:#f5a623}
 @media(min-width:900px){#stationPicker{font-size:12px;max-width:220px;top:42px;padding:6px 10px}}
 
 
@@ -381,6 +402,27 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   </div>
   <div style="font-size:9px;color:#1a2a38;letter-spacing:1px;margin-top:20px">
     SOUTH FLORIDA RAIL CORRIDOR TRACKER
+  </div>
+</div>
+
+<!-- WELCOME OVERLAY -->
+<div id="welcomeOverlay">
+  <div id="welcomeBox">
+    <div style="text-align:center;font-size:40px;margin-bottom:6px">🚂</div>
+    <h2>DEERFIELD RAIL</h2>
+    <div class="wsub">SOUTH FLORIDA RAIL CORRIDOR TRACKER</div>
+    <ul>
+      <li><span class="wicon">📡</span><span class="wtxt"><b>Live GPS Tracking</b> — real-time Amtrak &amp; Brightline positions via satellite</span></li>
+      <li><span class="wicon">🚆</span><span class="wtxt"><b>5 Rail Operators</b> — Tri-Rail, Amtrak, Brightline, FEC Freight, CSX Freight</span></li>
+      <li><span class="wicon">📍</span><span class="wtxt"><b>Pick Your Station</b> — set any station as home and get adjusted arrival times</span></li>
+      <li><span class="wicon">🎯</span><span class="wtxt"><b>Follow Trains</b> — tap a train to lock the camera and follow it across the map</span></li>
+      <li><span class="wicon">🛰</span><span class="wtxt"><b>Multiple Map Layers</b> — satellite, OpenRailwayMap, street, and dark mode</span></li>
+      <li><span class="wicon">🌧</span><span class="wtxt"><b>Live Rain Radar</b> — precipitation overlay from RainViewer</span></li>
+      <li><span class="wicon">📦</span><span class="wtxt"><b>Cargo Info</b> — see what each freight train is hauling</span></li>
+      <li><span class="wicon">🕐</span><span class="wtxt"><b>Trip Log</b> — auto-logs every train that passes near your position</span></li>
+    </ul>
+    <button id="welcomeBtn">LET'S GO</button>
+    <label class="wcheck"><input type="checkbox" id="welcomeHide"> Don't show this again</label>
   </div>
 </div>
 
@@ -1890,6 +1932,26 @@ if ("serviceWorker" in navigator &&
     navigator.serviceWorker.register("sw.js").catch(()=>{});
   });
 }
+
+// ══════════════════════════════════════════════════════════
+// WELCOME OVERLAY
+// ══════════════════════════════════════════════════════════
+(function() {
+  if (localStorage.getItem("rail_welcome_dismissed") === "1") return;
+  const overlay = document.getElementById("welcomeOverlay");
+  // Show after a short delay so the map loads behind it
+  setTimeout(() => overlay.classList.add("open"), 400);
+  document.getElementById("welcomeBtn").addEventListener("click", function() {
+    if (document.getElementById("welcomeHide").checked) {
+      localStorage.setItem("rail_welcome_dismissed", "1");
+    }
+    overlay.classList.remove("open");
+  });
+  // Also close on overlay background click
+  overlay.addEventListener("click", function(e) {
+    if (e.target === overlay) overlay.classList.remove("open");
+  });
+})();
 </script>
 </body>
 </html>
