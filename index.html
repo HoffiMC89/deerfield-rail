@@ -1367,13 +1367,13 @@ NOISE_ZONES.forEach(z => {
 });
 
 // ══════════════════════════════════════════════════════════
-// RAILWAY CROSSINGS — zoom-based, from OpenStreetMap
-// Only shown when zoomed in to ~5 miles (zoom ≥ 13)
-// Fetches only the visible area, caches results
+// RAILWAY CROSSINGS — FRA Crossing Inventory (ArcGIS)
+// Shows FRA data: safety equipment, traffic counts, quiet zones,
+// railroad operator, and links to FRA accident reports
 // ══════════════════════════════════════════════════════════
 const crossingLayer = L.layerGroup().addTo(map);
 let crossingsEnabled = true;
-let crossingCache = {}; // keyed by "lat4,lng4" to avoid duplicates
+let crossingCache = {}; // keyed by crossing ID
 let crossingFetchTimer = null;
 let lastFetchBounds = null;
 
@@ -1382,13 +1382,19 @@ const crossingIcon = L.divIcon({
     filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))">⚠️</div>`,
   className:"", iconSize:[16,16], iconAnchor:[8,8],
 });
+const quietCrossingIcon = L.divIcon({
+  html:`<div style="font-size:15px;line-height:1;cursor:pointer;
+    filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))">🔕</div>`,
+  className:"", iconSize:[16,16], iconAnchor:[8,8],
+});
+
+const FRA_XING_URL = "https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_Railroad_Grade_Crossings/FeatureServer/0/query";
 
 async function fetchCrossingsForView() {
   if (!crossingsEnabled) return;
   if (location.hostname.includes("claudeusercontent")) return;
 
   const zoom = map.getZoom();
-  // Only load at zoom 13+ (~5 mile radius visible)
   if (zoom < 13) {
     crossingLayer.clearLayers();
     crossingCache = {};
@@ -1397,65 +1403,71 @@ async function fetchCrossingsForView() {
   }
 
   const bounds = map.getBounds();
-  // Don't re-fetch if we already have this area covered
   if (lastFetchBounds && lastFetchBounds.contains(bounds)) return;
 
-  // Expand bounds slightly so panning doesn't immediately re-fetch
   const pad = 0.05;
   const s = bounds.getSouth() - pad, n = bounds.getNorth() + pad;
   const w = bounds.getWest()  - pad, e = bounds.getEast()  + pad;
 
-  const query = `[out:json][timeout:15];
-node["railway"="level_crossing"](${s.toFixed(4)},${w.toFixed(4)},${n.toFixed(4)},${e.toFixed(4)});
-out body;`;
+  const params = new URLSearchParams({
+    where: `LATITUDE >= ${s} AND LATITUDE <= ${n} AND LONGITUD >= ${w} AND LONGITUD <= ${e} AND StateCode='12'`,
+    outFields: "CROSSING,LATITUDE,LONGITUD,STREET,HIGHWAY,WDCODE,RAILROAD,TYPEXING,POSXING,AADT,AADTYEAR,MAINTRK,DAYTHRU,NGHTTHRU,WHISTBAN,CITYNAME,ACC_LINK,INV_LINK",
+    f: "json",
+    resultRecordCount: 500,
+  });
 
-  const mirrors = [
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
-  ];
+  try {
+    const resp = await fetch(`${FRA_XING_URL}?${params}`, {signal: AbortSignal.timeout(12000)});
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (!data.features) return;
 
-  let data = null;
-  for (const url of mirrors) {
-    try {
-      const resp = await fetch(url, {method:"POST", body:"data="+encodeURIComponent(query)});
-      if (!resp.ok) continue;
-      data = await resp.json();
-      break;
-    } catch(e) { /* try next mirror */ }
+    lastFetchBounds = bounds.pad(pad);
+
+    for (const f of data.features) {
+      const a = f.attributes;
+      if (!a.LATITUDE || !a.LONGITUD) continue;
+      const key = a.CROSSING || `${a.LATITUDE},${a.LONGITUD}`;
+      if (crossingCache[key]) continue;
+      crossingCache[key] = true;
+
+      const isQuiet = a.WHISTBAN === "Y" || a.WHISTBAN === 1;
+      const roadName = a.STREET || a.HIGHWAY || "";
+      const rr = a.RAILROAD || "?";
+      const wdesc = a.WDCODE || "Unknown";
+      const aadt = a.AADT ? `${Number(a.AADT).toLocaleString()} vehicles/day` : "";
+      const aadtYear = a.AADTYEAR ? ` (${a.AADTYEAR})` : "";
+      const trains = [];
+      if (a.DAYTHRU)  trains.push(`${a.DAYTHRU} day`);
+      if (a.NGHTTHRU) trains.push(`${a.NGHTTHRU} night`);
+      const trainStr = trains.length ? trains.join(", ") + " trains" : "";
+      const tracks = a.MAINTRK ? `${a.MAINTRK} main track${a.MAINTRK>1?"s":""}` : "";
+      const accLink = a.ACC_LINK ? `<br><a href="${a.ACC_LINK}" target="_blank" style="color:#60a5fa;font-size:8px">View FRA Accident Reports →</a>` : "";
+      const invLink = a.INV_LINK ? `<a href="${a.INV_LINK}" target="_blank" style="color:#60a5fa;font-size:8px">FRA Inventory →</a>` : "";
+
+      const popHtml = `
+        <div style="font-size:8px;letter-spacing:1px;color:#f5a623;margin-bottom:3px">${isQuiet?"🔕 QUIET ZONE":"⚠️ RAILWAY CROSSING"}</div>
+        <b style="color:#fff;font-size:12px">${roadName || "Unnamed crossing"}</b>
+        <span style="color:#6a8090;font-size:9px"> · ${a.CITYNAME||""}</span><br>
+        <span style="color:#aaa;font-size:9px">🚧 ${wdesc}</span><br>
+        <span style="color:#aaa;font-size:9px">🛤 ${rr} · ${tracks}${trainStr?" · "+trainStr:""}</span>
+        ${aadt?"<br><span style=\"color:#aaa;font-size:9px\">🚗 "+aadt+aadtYear+"</span>":""}
+        <br><span style="color:#3a5060;font-size:8px">ID: ${a.CROSSING || "?"} · ${a.POSXING||"At Grade"}</span>
+        ${accLink} ${invLink?"· "+invLink:""}`;
+
+      L.marker([a.LATITUDE, a.LONGITUD], {
+        icon: isQuiet ? quietCrossingIcon : crossingIcon,
+        zIndexOffset: 100
+      }).bindPopup(`<div style="border-left:3px solid ${isQuiet?"#60a5fa":"#f5a623"};padding-left:8px">${popHtml}</div>`,
+        {maxWidth:280})
+        .addTo(crossingLayer);
+    }
+
+    if (data.features.length)
+      console.log(`✓ +${data.features.length} FRA crossings loaded (zoom ${zoom})`);
+  } catch(e) {
+    console.warn("FRA crossing fetch error:", e);
   }
-  if (!data) return;
-
-  lastFetchBounds = bounds.pad(pad);
-
-  for (const node of data.elements) {
-    const key = `${node.lat.toFixed(4)},${node.lon.toFixed(4)}`;
-    if (crossingCache[key]) continue;
-    crossingCache[key] = true;
-
-    const tags = node.tags || {};
-    const roadName    = tags["name"] || tags["ref"] || "";
-    const barriers    = tags["crossing:barrier"] ? `🚧 ${tags["crossing:barrier"]}` : "";
-    const lights      = tags["crossing:light"] === "yes" ? "🚦 Lights" : "";
-    const bells       = tags["crossing:bell"]  === "yes" ? "🔔 Bell"   : "";
-    const supervision = tags["crossing:supervision"] || "";
-    const safety      = [barriers, lights, bells].filter(Boolean).join(" · ") || "⚠️ Uncontrolled";
-
-    const popHtml = `
-      <div style="font-size:8px;letter-spacing:1px;color:#f5a623;margin-bottom:3px">⚠️ RAILWAY CROSSING</div>
-      <b style="color:#fff;font-size:12px">${roadName || "Unnamed crossing"}</b><br>
-      <span style="color:#aaa;font-size:9px">${safety}</span>
-      ${supervision?"<br><span style=\"color:#6a8090;font-size:9px\">Supervision: "+supervision+"</span>":""}
-      <br><span style="color:#3a5060;font-size:8px">📍 ${node.lat.toFixed(5)}, ${node.lon.toFixed(5)}</span>`;
-
-    L.marker([node.lat, node.lon], {icon: crossingIcon, zIndexOffset: 100})
-      .bindPopup(`<div style="border-left:3px solid #f5a623;padding-left:8px">${popHtml}</div>`,
-        {maxWidth:220})
-      .addTo(crossingLayer);
-
-  }
-
-  if (data.elements.length)
-    console.log(`✓ +${data.elements.length} crossings loaded (zoom ${zoom})`);
 }
 
 // Debounce crossing fetch — wait 600ms after zoom/pan stops
