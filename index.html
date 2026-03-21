@@ -428,8 +428,8 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
       <div id="followBadge">🎯 FOLLOWING — tap to stop</div>
       <select id="stationPicker"></select>
       <div id="layertoggle">
-        <button id="btnOrm" class="on">🛤 ORM</button>
-        <button id="btnSat">🛰 SAT</button>
+        <button id="btnOrm">🛤 ORM</button>
+        <button id="btnSat" class="on">🛰 SAT</button>
         <button id="btnOsm">🗺 OSM</button>
         <button id="btnDark">🌑 DARK</button>
         <button id="btnWeather">🌧 RAIN</button>
@@ -667,8 +667,8 @@ const LAYERS = {
   dark: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
           {attribution:"© OSM © CARTO",maxZoom:19,subdomains:"abcd"}),
 };
-// ORM is default — it shows the real railway map
-LAYERS.orm.addTo(map);
+// Satellite is default
+LAYERS.sat.addTo(map);
 
 function setLayer(name) {
   Object.values(LAYERS).forEach(l=>{if(map.hasLayer(l))map.removeLayer(l);});
