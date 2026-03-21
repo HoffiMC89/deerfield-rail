@@ -6,7 +6,7 @@
 
 GITHUB_USER="HoffiMC89"
 REPO_NAME="deerfield-rail"
-TOKEN="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"
+TOKEN="ghp_IntEc1FFkyDK5FI1KyWK4eqidg0ksX0sPm"
 
 echo "🚂 Deploying Deerfield Rail Tracker to GitHub Pages..."
 
