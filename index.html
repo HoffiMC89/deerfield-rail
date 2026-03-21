@@ -739,11 +739,11 @@ function applyTrackData(csx, fec) {
 setTimeout(() => { rebuildTrackEngine(); }, 1000);
 
 // ── OSM fetch (upgrades fallback to real geometry) ────────
-const TRACK_CACHE_KEY  = "osmTrackData_v9";
+const TRACK_CACHE_KEY  = "osmTrackData_v10";
 const TRACK_CACHE_DAYS = 60;
 
 // Clear any old broken cache versions on startup
-["osmTrackData_v3","osmTrackData_v4","osmTrackData_v5","osmTrackData_v6","osmTrackData_v7","osmTrackData_v8"].forEach(k=>{
+["osmTrackData_v3","osmTrackData_v4","osmTrackData_v5","osmTrackData_v6","osmTrackData_v7","osmTrackData_v8","osmTrackData_v9"].forEach(k=>{
   try{localStorage.removeItem(k);}catch(e){}
 });
 const OVERPASS_URLS = [
@@ -759,20 +759,35 @@ function stitchWaysIntoLine(elements) {
   if (chains.length===1) return chains[0];
   chains.sort((a,b)=>Math.max(b[0][0],b[b.length-1][0])-Math.max(a[0][0],a[a.length-1][0]));
   const result=[...chains[0]], remaining=chains.slice(1);
-  while(remaining.length){
+  const GAP=0.08; // ~5.5 miles max gap tolerance
+  let stuck=0;
+  while(remaining.length && stuck<remaining.length){
     const tail=result[result.length-1];
-    let bi=0,bd=Infinity,bf=false;
+    const head=result[0];
+    // Try tail first, then head
+    let bi=0,bd=Infinity,bf=false,atHead=false;
     for(let i=0;i<remaining.length;i++){
       const h=remaining[i][0],e=remaining[i][remaining[i].length-1];
-      const dh=Math.hypot(tail[0]-h[0],tail[1]-h[1]);
-      const de=Math.hypot(tail[0]-e[0],tail[1]-e[1]);
-      if(dh<bd){bd=dh;bi=i;bf=false;}
-      if(de<bd){bd=de;bi=i;bf=true;}
+      // Match to tail
+      const dth=Math.hypot(tail[0]-h[0],tail[1]-h[1]);
+      const dte=Math.hypot(tail[0]-e[0],tail[1]-e[1]);
+      if(dth<bd){bd=dth;bi=i;bf=false;atHead=false;}
+      if(dte<bd){bd=dte;bi=i;bf=true;atHead=false;}
+      // Match to head
+      const dhh=Math.hypot(head[0]-h[0],head[1]-h[1]);
+      const dhe=Math.hypot(head[0]-e[0],head[1]-e[1]);
+      if(dhh<bd){bd=dhh;bi=i;bf=true;atHead=true;}
+      if(dhe<bd){bd=dhe;bi=i;bf=false;atHead=true;}
     }
-    if(bd>0.05)break;
+    if(bd>GAP){stuck++;continue;}
+    stuck=0;
     const chain=remaining.splice(bi,1)[0];
     const pts=bf?[...chain].reverse():chain;
-    result.push(...pts.slice(bd<0.0002?1:0));
+    if(atHead){
+      result.unshift(...pts.slice(0,bd<0.0002?pts.length-1:pts.length));
+    } else {
+      result.push(...pts.slice(bd<0.0002?1:0));
+    }
   }
   return result;
 }
@@ -808,7 +823,7 @@ async function loadOsmTracks() {
 
   setTrackStatus("⏳ loading OSM…","#f5a623");
   const sfrcQ=`[out:json][timeout:45];relation(2203671);way(r)["railway"="rail"];out geom;`;
-  const fecQ=`[out:json][timeout:45];way["railway"="rail"]["operator"~"FEC|Florida East Coast"](25.75,-80.32,26.80,-80.03);out geom;`;
+  const fecQ=`[out:json][timeout:45];relation(7405045);way(r)["railway"="rail"];out geom;`;
   const [sfrcData,fecData]=await Promise.all([fetchOverpass(sfrcQ),fetchOverpass(fecQ)]);
 
   let csx=null,fec=null;
