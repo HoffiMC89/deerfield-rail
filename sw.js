@@ -10,6 +10,7 @@ const ASSETS = [
   "/deerfield-rail/icon-512.png",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js",
+  "https://cdn.jsdelivr.net/npm/protobufjs@7/dist/protobuf.min.js",
 ];
 
 // Install: cache all core assets
@@ -35,6 +36,9 @@ self.addEventListener("fetch", e => {
   // Always go live for train APIs and weather/map tiles
   if (
     url.includes("amtraker.com") ||
+    url.includes("tri-rail.com") ||
+    url.includes("corsproxy.io") ||
+    url.includes("allorigins.win") ||
     url.includes("rainviewer.com") ||
     url.includes("arcgisonline.com") ||
     url.includes("openstreetmap.org") ||

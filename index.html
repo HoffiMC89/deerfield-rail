@@ -530,6 +530,7 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
 </div><!-- end #app -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/protobufjs@7/dist/protobuf.min.js"></script>
 <script>
 
 // ══════════════════════════════════════════════════════════
@@ -1211,8 +1212,81 @@ async function fetchLive() {
     document.getElementById("apistatus").style.color="#f5a623";
   }
 }
-fetchLive();
-setInterval(fetchLive, 30000);
+
+// ══════════════════════════════════════════════════════════
+// LIVE API — Tri-Rail GTFS-RT (protobuf via CORS proxy)
+// ══════════════════════════════════════════════════════════
+let triRailProto = null; // cached proto root
+const CORS_PROXIES = [
+  url => "https://corsproxy.io/?" + encodeURIComponent(url),
+  url => "https://api.allorigins.win/raw?url=" + encodeURIComponent(url),
+];
+const TRIRAIL_PB_URL = "https://gtfsr.tri-rail.com/download.aspx?file=position_updates.pb";
+
+async function loadTriRailProto() {
+  if (triRailProto) return triRailProto;
+  try {
+    triRailProto = await protobuf.load(
+      "https://raw.githubusercontent.com/google/transit/master/gtfs-realtime/proto/gtfs-realtime.proto"
+    );
+    return triRailProto;
+  } catch(e) {
+    console.warn("Failed to load GTFS-RT proto:", e);
+    return null;
+  }
+}
+
+async function fetchTriRail() {
+  try {
+    const root = await loadTriRailProto();
+    if (!root) return;
+    const FeedMessage = root.lookupType("transit_realtime.FeedMessage");
+
+    let buffer = null;
+    for (const makeUrl of CORS_PROXIES) {
+      try {
+        const r = await fetch(makeUrl(TRIRAIL_PB_URL), {cache:"no-store", signal:AbortSignal.timeout(15000)});
+        if (!r.ok) continue;
+        buffer = await r.arrayBuffer();
+        if (buffer.byteLength > 10) break;
+      } catch(e) { /* try next proxy */ }
+    }
+    if (!buffer || buffer.byteLength < 10) return;
+
+    const feed = FeedMessage.decode(new Uint8Array(buffer));
+    let count = 0;
+    for (const entity of feed.entity) {
+      const v = entity.vehicle;
+      if (!v || !v.position) continue;
+      const lat = v.position.latitude, lng = v.position.longitude;
+      if (lat < MAP_S || lat > MAP_N) continue;
+      const tripId = v.trip?.tripId || "";
+      const label  = v.vehicle?.label || v.vehicle?.id || tripId;
+      const id     = "live_tri_" + (v.vehicle?.id || tripId || entity.id);
+      const speed  = v.position.speed ? v.position.speed * 2.237 : 0; // m/s to mph
+      const bearing = v.position.bearing || 0;
+      const dir = (bearing > 90 && bearing < 270) ? "SB" : "NB";
+      liveData[id] = {
+        lat, lng, heading: bearing ? Math.round(bearing) + "°" : "",
+        name: "Tri-Rail " + (tripId.replace(/[^A-Za-z0-9]/g,"") || label),
+        num: label,
+        type: "tri",
+        dir, speed,
+        updated: v.timestamp ? new Date(Number(v.timestamp) * 1000) : new Date(),
+      };
+      count++;
+    }
+    if (count) console.log(`✓ Tri-Rail GTFS-RT: ${count} live vehicles`);
+  } catch(e) {
+    console.warn("Tri-Rail GTFS-RT error:", e);
+  }
+}
+
+async function fetchAllLive() {
+  await Promise.all([fetchLive(), fetchTriRail()]);
+}
+fetchAllLive();
+setInterval(fetchAllLive, 30000);
 // Based on FEC/CSX train symbols from botecomm.com schedules
 // ══════════════════════════════════════════════════════════
 const CARGO = {
