@@ -83,14 +83,16 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
 .isLive{color:#00ee77}.isSim{color:#f5a623}
 #mapwrap{position:relative;flex-shrink:0}
 #map{width:100%}
-#mapcorner{position:absolute;top:5px;left:5px;z-index:1000;background:rgba(5,8,18,.9);
-  border:1px solid #18243a;border-radius:5px;letter-spacing:1px;color:#3a5060;
-  pointer-events:none;line-height:1.6}
+#mapcorner{position:absolute;top:5px;left:5px;z-index:1000;background:rgba(0,0,0,.75);
+  border:1px solid rgba(255,255,255,.15);border-radius:5px;letter-spacing:1px;color:#c0cfe0;
+  pointer-events:none;line-height:1.6;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #mapcorner b{color:#f5a623}
-#apistatus{position:absolute;top:5px;right:5px;z-index:1000;background:rgba(5,8,18,.9);
-  border:1px solid #18243a;border-radius:5px;letter-spacing:1px;pointer-events:none;color:#f5a623}
+#apistatus{position:absolute;top:5px;right:5px;z-index:1000;background:rgba(0,0,0,.75);
+  border:1px solid rgba(255,255,255,.15);border-radius:5px;letter-spacing:1px;pointer-events:none;color:#f5a623;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #layertoggle{position:absolute;bottom:20px;right:5px;z-index:1000;display:flex;flex-direction:column;gap:3px}
-#layertoggle button{background:rgba(5,8,18,.92);border:1px solid #334;color:#aaa;border-radius:4px}
+#layertoggle button{background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.15);color:#ddd;border-radius:4px;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #layertoggle button.on{border-color:#f5a623;color:#f5a623;background:#182030}
 .you-ring{width:18px;height:18px;border-radius:50%;background:rgba(0,238,119,.2);
   display:flex;align-items:center;justify-content:center;animation:youPulse 2s infinite}
@@ -250,18 +252,21 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   #histBtn{padding:6px 14px;font-size:11px;min-height:30px}
 }
 
-/* map overlays */
-#mapcorner{position:absolute;top:5px;left:5px;z-index:1000;background:rgba(5,8,18,.9);
-  border:1px solid #18243a;border-radius:5px;padding:3px 7px;font-size:6.5px;
-  letter-spacing:1px;color:#3a5060;pointer-events:none;line-height:1.6}
+/* map overlays — duplicated for specificity, matches base styles */
+#mapcorner{position:absolute;top:5px;left:5px;z-index:1000;background:rgba(0,0,0,.75);
+  border:1px solid rgba(255,255,255,.15);border-radius:5px;padding:4px 8px;font-size:7px;
+  letter-spacing:1px;color:#c0cfe0;pointer-events:none;line-height:1.6;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #mapcorner b{color:#f5a623}
-#apistatus{position:absolute;top:5px;right:5px;z-index:1000;background:rgba(5,8,18,.9);
-  border:1px solid #18243a;border-radius:5px;padding:3px 7px;font-size:6.5px;
-  letter-spacing:1px;pointer-events:none;color:#f5a623}
+#apistatus{position:absolute;top:5px;right:5px;z-index:1000;background:rgba(0,0,0,.75);
+  border:1px solid rgba(255,255,255,.15);border-radius:5px;padding:4px 8px;font-size:7px;
+  letter-spacing:1px;pointer-events:none;color:#f5a623;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #layertoggle{position:absolute;bottom:20px;right:5px;z-index:1000;display:flex;flex-direction:column;gap:3px}
-#layertoggle button{background:rgba(5,8,18,.92);border:1px solid #334;color:#aaa;
-  padding:3px 7px;font-size:8px;border-radius:4px;min-height:26px}
-#layertoggle button.on{border-color:#f5a623;color:#f5a623;background:#182030}
+#layertoggle button{background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.15);color:#ddd;
+  padding:4px 8px;font-size:8px;border-radius:4px;min-height:26px;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#layertoggle button.on{border-color:#f5a623;color:#f5a623;background:rgba(24,32,48,.9)}
 
 /* YOU marker */
 .you-ring{width:18px;height:18px;border-radius:50%;background:rgba(0,238,119,.2);
@@ -308,34 +313,40 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
 .quiet-zone-label{font-size:7px;color:#a0c4ff}
 
 /* weather toggle btn */
-#btnWeather{background:rgba(5,8,18,.9);border:1px solid #334;color:#aaa;
-  padding:3px 7px;font-size:8px;border-radius:4px;min-height:26px}
-#btnWeather.on{border-color:#60a5fa;color:#60a5fa;background:#0d1a2e}
+#btnWeather{background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.15);color:#ddd;
+  padding:3px 7px;font-size:8px;border-radius:4px;min-height:26px;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#btnWeather.on{border-color:#60a5fa;color:#60a5fa;background:rgba(13,26,46,.9)}
 
 /* ── Fullscreen map mode ── */
 #app.fullscreen-map #hdr,#app.fullscreen-map #panel{display:none!important}
 #app.fullscreen-map #body{flex-direction:column!important}
 #app.fullscreen-map #mapwrap{width:100%!important;height:100%!important;flex:1!important}
 #app.fullscreen-map #map{height:100%!important}
-#btnFullscreen{position:absolute;bottom:20px;left:6px;z-index:1000;
-  background:rgba(5,8,18,.92);border:1px solid #334;color:#aaa;
+#btnFullscreen{background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.15);color:#ddd;
   padding:5px 9px;border-radius:5px;font-size:14px;min-height:32px;
-  box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer}
+  box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #btnFullscreen.on{border-color:#f5a623;color:#f5a623}
 
 /* ── Follow indicator ── */
 #followBadge{position:absolute;top:36px;left:50%;transform:translateX(-50%);z-index:1000;
-  background:rgba(245,166,35,.15);border:1px solid #f5a623;border-radius:20px;
-  padding:3px 12px;font-size:9px;color:#f5a623;letter-spacing:1px;font-family:monospace;
-  pointer-events:auto;cursor:pointer;display:none;white-space:nowrap}
+  background:rgba(0,0,0,.8);border:1px solid #f5a623;border-radius:20px;
+  padding:4px 14px;font-size:10px;color:#f5a623;letter-spacing:1px;font-family:monospace;
+  pointer-events:auto;cursor:pointer;display:none;white-space:nowrap;font-weight:bold;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  box-shadow:0 2px 10px rgba(0,0,0,.5)}
 #followBadge.active{display:block}
 
 /* ── Station picker ── */
 #stationPicker{position:absolute;top:36px;right:5px;z-index:1000;
-  background:rgba(5,8,18,.92);border:1px solid #18243a;border-radius:5px;
-  padding:0;font-family:monospace;font-size:9px;color:#c8d6e5;
-  outline:none;cursor:pointer;max-width:140px}
-@media(min-width:900px){#stationPicker{font-size:11px;max-width:200px;top:42px}}
+  background:rgba(0,0,0,.8);border:1px solid rgba(255,255,255,.2);border-radius:5px;
+  padding:4px 6px;font-family:monospace;font-size:10px;color:#fff;
+  outline:none;cursor:pointer;max-width:160px;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  box-shadow:0 2px 8px rgba(0,0,0,.4)}
+#stationPicker option{background:#0b1020;color:#fff}
+@media(min-width:900px){#stationPicker{font-size:12px;max-width:220px;top:42px;padding:6px 10px}}
 
 
 .leaflet-popup-content-wrapper{background:#0a0e1a!important;border:1px solid #1e2d4a!important;
@@ -404,14 +415,14 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
       </div>
       <div id="apistatus">⏳ LOADING…</div>
       <div id="trackstatus" style="position:absolute;bottom:90px;left:6px;z-index:1000;
-        background:rgba(5,8,18,.88);border:1px solid #18243a;border-radius:5px;
-        padding:3px 7px;font-size:7px;letter-spacing:1px;pointer-events:none;
-        color:#f5a623;font-family:monospace">🗺 TRACK DATA…</div>
+        background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.15);border-radius:5px;
+        padding:3px 7px;font-size:8px;letter-spacing:1px;pointer-events:none;
+        color:#f5a623;font-family:monospace;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)">🗺 TRACK DATA…</div>
       <!-- left-side map buttons — stacked vertically -->
       <div style="position:absolute;bottom:20px;left:6px;z-index:1000;display:flex;flex-direction:column;gap:4px">
-        <button id="locateBtn" style="background:rgba(5,8,18,.92);border:1px solid #00ee77;color:#00ee77;
+        <button id="locateBtn" style="background:rgba(0,0,0,.75);border:1px solid #00ee77;color:#00ee77;
           padding:5px 9px;border-radius:5px;font-size:14px;min-height:32px;
-          box-shadow:0 2px 8px rgba(0,0,0,.5)" title="Center on my location">📍</button>
+          box-shadow:0 2px 8px rgba(0,0,0,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)" title="Center on my location">📍</button>
         <button id="btnFullscreen" title="Fullscreen map">⛶</button>
       </div>
       <div id="followBadge">🎯 FOLLOWING — tap to stop</div>
