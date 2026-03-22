@@ -476,6 +476,7 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         <button id="btnDark">🌑 DARK</button>
         <button id="btnWeather">🌧 RAIN</button>
         <button id="btnCrossings" class="on">⚠️ XING</button>
+        <button id="btnCameras">📹 CAM</button>
       </div>
     </div>
 
@@ -1477,6 +1478,79 @@ function scheduleCrossingFetch() {
 }
 // Trigger fetch on zoom and move
 map.on("zoomend moveend", scheduleCrossingFetch);
+
+// ══════════════════════════════════════════════════════════
+// FDOT TRAFFIC CAMERAS — FL511 (ArcGIS + live JPEG snapshots)
+// Shows cameras near the rail corridor with live image popups
+// ══════════════════════════════════════════════════════════
+const cameraLayer = L.layerGroup();
+let camerasLoaded = false;
+let camerasEnabled = false;
+
+const cameraIcon = L.divIcon({
+  html:`<div style="font-size:14px;line-height:1;cursor:pointer;
+    filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))">📹</div>`,
+  className:"", iconSize:[16,16], iconAnchor:[8,8],
+});
+
+async function loadCameras() {
+  if (camerasLoaded) return;
+  try {
+    const url = "https://services.arcgis.com/3wFbqsFPLeKqOlIK/arcgis/rest/services/FL511_Traffic_Cameras/FeatureServer/0/query?" +
+      "where=COUNTY+IN+('Broward','Palm+Beach','Miami-Dade')" +
+      "&outFields=ID,DESCRIPT,COUNTY,HIGHWAY,DIRECTION,LATITUDE,LONGITUDE" +
+      "&f=json&resultRecordCount=2000";
+    const resp = await fetch(url, {signal: AbortSignal.timeout(15000)});
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (!data.features) return;
+
+    // Filter to cameras within ~2mi of rail corridor (lng -80.03 to -80.32)
+    const railCams = data.features.filter(f => {
+      const a = f.attributes;
+      if (!a.LATITUDE || !a.LONGITUDE) return false;
+      return a.LATITUDE >= 25.75 && a.LATITUDE <= 26.80 &&
+             a.LONGITUDE >= -80.32 && a.LONGITUDE <= -80.03;
+    });
+
+    for (const f of railCams) {
+      const a = f.attributes;
+      const snapUrl = `https://fl511.com/map/Cctv/${a.ID}`;
+      const popHtml = `
+        <div style="border-left:3px solid #60a5fa;padding-left:8px">
+          <div style="font-size:8px;letter-spacing:1px;color:#60a5fa;margin-bottom:3px">📹 FDOT TRAFFIC CAMERA</div>
+          <b style="color:#fff;font-size:11px">${a.DESCRIPT || "Camera"}</b><br>
+          <span style="color:#6a8090;font-size:9px">${a.HIGHWAY||""} ${a.DIRECTION||""} · ${a.COUNTY||""}</span>
+          <div style="margin-top:6px">
+            <img src="${snapUrl}" style="width:260px;height:auto;border-radius:4px;border:1px solid #1e2d4a"
+              onerror="this.style.display='none'" alt="Live camera"/>
+          </div>
+          <div style="font-size:7px;color:#3a5060;margin-top:3px">Live snapshot · refreshes every ~60s</div>
+        </div>`;
+      L.marker([a.LATITUDE, a.LONGITUDE], {icon: cameraIcon, zIndexOffset: 50})
+        .bindPopup(popHtml, {maxWidth: 300, minWidth: 280})
+        .addTo(cameraLayer);
+    }
+
+    camerasLoaded = true;
+    console.log(`✓ ${railCams.length} FDOT cameras loaded near corridor`);
+  } catch(e) {
+    console.warn("FDOT camera fetch error:", e);
+  }
+}
+
+function toggleCameras() {
+  camerasEnabled = !camerasEnabled;
+  const btn = document.getElementById("btnCameras");
+  if (camerasEnabled) {
+    loadCameras().then(() => cameraLayer.addTo(map));
+    btn.classList.add("on");
+  } else {
+    if (map.hasLayer(cameraLayer)) map.removeLayer(cameraLayer);
+    btn.classList.remove("on");
+  }
+}
+
 // OpenWeatherMap precipitation tiles (free, no key needed for tile layer)
 // ══════════════════════════════════════════════════════════
 const weatherLayer = L.tileLayer(
@@ -1706,6 +1780,7 @@ document.getElementById("btnSat")  .addEventListener("click", () => setLayer("sa
 document.getElementById("btnOsm")  .addEventListener("click", () => setLayer("osm"));
 document.getElementById("btnDark") .addEventListener("click", () => setLayer("dark"));
 document.getElementById("btnWeather").addEventListener("click", toggleWeather);
+document.getElementById("btnCameras").addEventListener("click", toggleCameras);
 document.getElementById("btnCrossings").addEventListener("click", function() {
   crossingsEnabled = !crossingsEnabled;
   if (crossingsEnabled) {
