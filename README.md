@@ -8,16 +8,35 @@ A live, mobile-optimized train tracker for the South Florida rail corridor — b
 
 ## Features
 
+### Live Tracking
 - 📡 **Live GPS** — real-time Amtrak & Brightline positions via Amtraker API
-- 🗺️ **Satellite / OSM / Dark maps** — switchable tile layers
-- 🚆 **All 5 operators** — Tri-Rail, Amtrak, Brightline, FEC Freight, CSX Freight
+- 🚆 **Tri-Rail Live GPS** — real-time vehicle positions via SFRTA GTFS-RT feed (protobuf decoded in-browser)
+- 🚂 **All 5 operators** — Tri-Rail, Amtrak, Brightline, FEC Freight, CSX Freight
 - ⚡ **Speed display** — live mph on every train marker
+- 🎯 **Follow mode** — tap a train to lock the camera and follow it across the map
+
+### Map & Layers
+- 🛰 **Satellite / ORM / OSM / Dark maps** — switchable tile layers (satellite default)
+- 🛤 **Real track geometry** — OSM-sourced rail lines snapped to actual railroad positions (SFRC + FEC)
+- 🌧 **Rain radar** — live precipitation overlay from RainViewer
+- ⛶ **Fullscreen map** — toggle for distraction-free viewing
+
+### Safety & Infrastructure
+- ⚠️ **FRA Crossing Inventory** — federal crossing data with safety equipment, traffic counts, quiet zone status, and links to FRA accident reports
+- 🔕 **Quiet zones** — FRA quiet zones and active horn crossings mapped
+- ⛈ **NWS Weather Alerts** — severe/extreme weather warnings from the National Weather Service for Broward, Palm Beach, and Miami-Dade counties
+- 📹 **FDOT Traffic Cameras** — live JPEG snapshots from FL511 cameras near the rail corridor
+
+### Schedule & Station
+- 📍 **Station picker** — set any station from Mangonia Park to Miami Airport as your home station
+- ⏱ **Adjusted arrival times** — schedule times recalculated based on your selected station
 - 📦 **Cargo info** — what each freight train is hauling
-- 🌧️ **Rain radar** — live precipitation overlay
-- 🔕 **Quiet/noise zones** — FRA quiet zones and active crossings mapped
-- 🕐 **Trip log** — auto-logs every train that passes your position
-- 📍 **GPS locate** — centers map on your real-time position
-- 📱 **PWA** — installable on iPhone home screen, works offline
+- 🕐 **Trip log** — auto-logs every train that passes near your position with CSV export
+
+### App
+- 📱 **PWA** — installable on iPhone/Android home screen, works offline
+- 🔒 **Password protected** — session-based access control
+- 👋 **Welcome overlay** — feature tour for first-time users
 
 ---
 
@@ -37,15 +56,20 @@ The app will appear on your home screen like a native app — fullscreen, no bro
 | Data | Source |
 |------|--------|
 | Amtrak + Brightline live GPS | [Amtraker API](https://api-v3.amtraker.com) |
-| Tri-Rail schedule | [tri-rail.com](https://www.tri-rail.com) |
-| FEC freight schedule | [botecomm.com](https://www.botecomm.com/bote/rail/fec_sked.html) |
+| Tri-Rail live GPS | [SFRTA GTFS-RT](https://gtfsr.tri-rail.com/) |
+| Tri-Rail / FEC / CSX schedules | [tri-rail.com](https://www.tri-rail.com) · [botecomm.com](https://www.botecomm.com/bote/rail/fec_sked.html) |
+| Rail track geometry | [OpenStreetMap](https://www.openstreetmap.org) via Overpass API |
+| Railroad crossings | [FRA/BTS ArcGIS](https://geodata.bts.gov/) |
+| Weather alerts | [NWS api.weather.gov](https://api.weather.gov) |
+| Traffic cameras | [FDOT FL511](https://fl511.com) |
 | Rain radar | [RainViewer](https://rainviewer.com) |
 | Satellite imagery | Esri World Imagery |
-| Street map | © OpenStreetMap contributors |
+| Railway map | [OpenRailwayMap](https://openrailwaymap.org) |
+| Street / dark map | © OpenStreetMap · © CARTO |
 
 ---
 
 ## Tech Stack
 
-Pure HTML/CSS/JS — zero frameworks, zero build tools.  
-Leaflet.js for maps · Service Worker for offline · localStorage for trip log.
+Pure HTML/CSS/JS — zero frameworks, zero build tools.
+Leaflet.js for maps · protobuf.js for GTFS-RT decoding · Service Worker for offline · localStorage for settings & trip log.
