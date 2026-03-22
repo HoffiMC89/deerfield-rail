@@ -347,6 +347,21 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   box-shadow:0 2px 8px rgba(0,0,0,.4)}
 #stationPicker option{background:#0b1020;color:#fff}
 
+/* ── Fullscreen camera viewer ── */
+#camFullscreen{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.95);
+  flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#camFullscreen.open{display:flex}
+#camFullscreen img{max-width:95vw;max-height:80vh;border-radius:8px;border:1px solid #1e2d4a;
+  box-shadow:0 4px 30px rgba(0,0,0,.8)}
+#camFullscreen .cam-title{color:#fff;font-size:14px;font-weight:bold;margin-bottom:8px;
+  font-family:monospace;letter-spacing:2px;text-align:center}
+#camFullscreen .cam-meta{color:#6a8090;font-size:10px;margin-bottom:12px;font-family:monospace;text-align:center}
+#camFullscreen .cam-close{position:absolute;top:16px;right:20px;color:#aaa;font-size:24px;
+  background:rgba(0,0,0,.6);border:1px solid #334;border-radius:8px;padding:4px 14px;
+  cursor:pointer;font-family:monospace}
+#camFullscreen .cam-refresh{color:#3a5060;font-size:9px;margin-top:8px;font-family:monospace}
+
 /* ── Welcome overlay ── */
 #welcomeOverlay{display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,.7);
   align-items:center;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
@@ -412,18 +427,27 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
     <h2>DEERFIELD RAIL</h2>
     <div class="wsub">SOUTH FLORIDA RAIL CORRIDOR TRACKER</div>
     <ul>
-      <li><span class="wicon">📡</span><span class="wtxt"><b>Live GPS Tracking</b> — real-time Amtrak &amp; Brightline positions via satellite</span></li>
+      <li><span class="wicon">📡</span><span class="wtxt"><b>Live GPS Tracking</b> — real-time positions for Amtrak, Brightline &amp; Tri-Rail</span></li>
       <li><span class="wicon">🚆</span><span class="wtxt"><b>5 Rail Operators</b> — Tri-Rail, Amtrak, Brightline, FEC Freight, CSX Freight</span></li>
       <li><span class="wicon">📍</span><span class="wtxt"><b>Pick Your Station</b> — set any station as home and get adjusted arrival times</span></li>
       <li><span class="wicon">🎯</span><span class="wtxt"><b>Follow Trains</b> — tap a train to lock the camera and follow it across the map</span></li>
-      <li><span class="wicon">🛰</span><span class="wtxt"><b>Multiple Map Layers</b> — satellite, OpenRailwayMap, street, and dark mode</span></li>
-      <li><span class="wicon">🌧</span><span class="wtxt"><b>Live Rain Radar</b> — precipitation overlay from RainViewer</span></li>
-      <li><span class="wicon">📦</span><span class="wtxt"><b>Cargo Info</b> — see what each freight train is hauling</span></li>
-      <li><span class="wicon">🕐</span><span class="wtxt"><b>Trip Log</b> — auto-logs every train that passes near your position</span></li>
+      <li><span class="wicon">📹</span><span class="wtxt"><b>Traffic Cameras</b> — live FDOT camera snapshots near the rail corridor with fullscreen view</span></li>
+      <li><span class="wicon">⚠️</span><span class="wtxt"><b>FRA Crossing Data</b> — safety equipment, traffic counts, quiet zones &amp; accident reports</span></li>
+      <li><span class="wicon">⛈</span><span class="wtxt"><b>Weather Alerts</b> — NWS severe weather warnings for the corridor in real time</span></li>
+      <li><span class="wicon">🌧</span><span class="wtxt"><b>Rain Radar &amp; Maps</b> — satellite, OpenRailwayMap, street, dark mode &amp; precipitation</span></li>
     </ul>
     <button id="welcomeBtn">LET'S GO</button>
     <label class="wcheck"><input type="checkbox" id="welcomeHide"> Don't show this again</label>
   </div>
+</div>
+
+<!-- FULLSCREEN CAMERA VIEWER -->
+<div id="camFullscreen" onclick="closeCamFullscreen()">
+  <div class="cam-close">✕</div>
+  <div class="cam-title" id="camFsTitle"></div>
+  <div class="cam-meta" id="camFsMeta"></div>
+  <img id="camFsImg" src="" alt="Camera"/>
+  <div class="cam-refresh">Live snapshot · auto-refreshes every 10s · tap anywhere to close</div>
 </div>
 
 <div id="app">
@@ -1488,9 +1512,10 @@ let camerasLoaded = false;
 let camerasEnabled = false;
 
 const cameraIcon = L.divIcon({
-  html:`<div style="font-size:14px;line-height:1;cursor:pointer;
-    filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))">📹</div>`,
-  className:"", iconSize:[16,16], iconAnchor:[8,8],
+  html:`<div style="width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.8);
+    border:2px solid #60a5fa;display:flex;align-items:center;justify-content:center;
+    font-size:12px;line-height:1;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.6)">📹</div>`,
+  className:"", iconSize:[22,22], iconAnchor:[11,11],
 });
 
 async function loadCameras() {
@@ -1516,14 +1541,18 @@ async function loadCameras() {
     for (const f of railCams) {
       const a = f.attributes;
       const snapUrl = `https://fl511.com/map/Cctv/${a.ID}`;
+      const camName = a.DESCRIPT || "Camera";
+      const camMeta = `${a.HIGHWAY||""} ${a.DIRECTION||""} · ${a.COUNTY||""}`.trim();
       const popHtml = `
         <div style="border-left:3px solid #60a5fa;padding-left:8px">
           <div style="font-size:8px;letter-spacing:1px;color:#60a5fa;margin-bottom:3px">📹 FDOT TRAFFIC CAMERA</div>
-          <b style="color:#fff;font-size:11px">${a.DESCRIPT || "Camera"}</b><br>
-          <span style="color:#6a8090;font-size:9px">${a.HIGHWAY||""} ${a.DIRECTION||""} · ${a.COUNTY||""}</span>
-          <div style="margin-top:6px">
+          <b style="color:#fff;font-size:11px">${camName}</b><br>
+          <span style="color:#6a8090;font-size:9px">${camMeta}</span>
+          <div style="margin-top:6px;position:relative;cursor:pointer" onclick="openCamFullscreen('${snapUrl}','${camName.replace(/'/g,"\\'")}','${camMeta.replace(/'/g,"\\'")}')">
             <img src="${snapUrl}" style="width:260px;height:auto;border-radius:4px;border:1px solid #1e2d4a"
               onerror="this.style.display='none'" alt="Live camera"/>
+            <div style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);color:#fff;
+              border-radius:3px;padding:2px 6px;font-size:8px;pointer-events:none">⛶ TAP FOR FULLSCREEN</div>
           </div>
           <div style="font-size:7px;color:#3a5060;margin-top:3px">Live snapshot · refreshes every ~60s</div>
         </div>`;
@@ -2168,16 +2197,38 @@ if ("serviceWorker" in navigator &&
 }
 
 // ══════════════════════════════════════════════════════════
+// FULLSCREEN CAMERA VIEWER
+// ══════════════════════════════════════════════════════════
+let camFsInterval = null;
+function openCamFullscreen(url, name, meta) {
+  document.getElementById("camFsTitle").textContent = name;
+  document.getElementById("camFsMeta").textContent = meta;
+  const img = document.getElementById("camFsImg");
+  img.src = url + "?t=" + Date.now();
+  document.getElementById("camFullscreen").classList.add("open");
+  // Auto-refresh every 10 seconds
+  clearInterval(camFsInterval);
+  camFsInterval = setInterval(() => {
+    img.src = url + "?t=" + Date.now();
+  }, 10000);
+}
+function closeCamFullscreen() {
+  document.getElementById("camFullscreen").classList.remove("open");
+  clearInterval(camFsInterval);
+  document.getElementById("camFsImg").src = "";
+}
+
+// ══════════════════════════════════════════════════════════
 // WELCOME OVERLAY
 // ══════════════════════════════════════════════════════════
 (function() {
-  if (localStorage.getItem("rail_welcome_dismissed") === "1") return;
+  if (localStorage.getItem("rail_welcome_v2") === "1") return;
   const overlay = document.getElementById("welcomeOverlay");
   // Show after a short delay so the map loads behind it
   setTimeout(() => overlay.classList.add("open"), 400);
   document.getElementById("welcomeBtn").addEventListener("click", function() {
     if (document.getElementById("welcomeHide").checked) {
-      localStorage.setItem("rail_welcome_dismissed", "1");
+      localStorage.setItem("rail_welcome_v2", "1");
     }
     overlay.classList.remove("open");
   });
