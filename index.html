@@ -347,6 +347,69 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   box-shadow:0 2px 8px rgba(0,0,0,.4)}
 #stationPicker option{background:#0b1020;color:#fff}
 
+/* ── Approach alert banner ── */
+#approachAlert{position:absolute;top:5px;left:50%;transform:translateX(-50%);z-index:1500;
+  background:rgba(255,60,80,.92);border:1px solid #ff3d4d;border-radius:22px;
+  padding:5px 14px;font-family:monospace;font-size:11px;color:#fff;font-weight:bold;
+  letter-spacing:1px;white-space:nowrap;display:none;cursor:pointer;
+  box-shadow:0 0 18px rgba(255,60,80,.6),0 2px 10px rgba(0,0,0,.5);
+  animation:approachPulse 1.2s infinite;pointer-events:auto}
+#approachAlert.show{display:block}
+@keyframes approachPulse{
+  0%,100%{box-shadow:0 0 8px rgba(255,60,80,.5),0 2px 10px rgba(0,0,0,.5)}
+  50%{box-shadow:0 0 24px rgba(255,60,80,.95),0 2px 14px rgba(0,0,0,.6)}
+}
+@media(max-width:899px){#approachAlert{font-size:9px;padding:4px 10px;top:4px}}
+
+/* ── Sound toggle btn ── */
+#btnSound{background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.15);color:#888;
+  border-radius:4px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#btnSound.on{border-color:#00ee77;color:#00ee77;background:rgba(10,26,10,.9)}
+
+/* ── Keyboard shortcuts help dialog ── */
+#helpDialog{display:none;position:fixed;inset:0;z-index:8500;background:rgba(0,0,0,.7);
+  align-items:center;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#helpDialog.open{display:flex}
+#helpBox{background:#0b1020;border:1px solid #1e2d4a;border-radius:12px;padding:22px 20px;
+  max-width:380px;width:90%;font-family:monospace;color:#c8d6e5;max-height:85vh;overflow-y:auto}
+#helpBox h2{margin:0 0 12px;font-size:14px;color:#fff;letter-spacing:3px;text-align:center}
+#helpBox table{width:100%;border-collapse:collapse;font-size:11px}
+#helpBox td{padding:6px 0;border-bottom:1px solid #18243a;vertical-align:top}
+#helpBox td:first-child{width:70px}
+#helpBox kbd{background:#182030;border:1px solid #2a3a50;border-radius:3px;
+  padding:2px 7px;font-family:monospace;font-size:10px;color:#f5a623;white-space:nowrap}
+#helpClose{display:block;width:100%;margin-top:14px;padding:10px;background:#f5a623;
+  border:none;color:#000;font-family:monospace;font-size:12px;font-weight:bold;
+  letter-spacing:2px;border-radius:6px;cursor:pointer}
+
+/* ── Schedule search box ── */
+#searchWrap{display:flex;align-items:center;gap:4px;flex-shrink:0;position:relative}
+#searchBox{flex:1;min-width:0;background:#0b1020;border:1px solid #18243a;color:#c8d6e5;
+  border-radius:14px;padding:4px 10px;font-family:monospace;outline:none}
+#searchBox:focus{border-color:#00d4ff;background:#0d1628}
+#searchBox::placeholder{color:#2a3a50}
+#searchClear{background:transparent;border:none;color:#3a5060;cursor:pointer;
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:2px 5px;
+  font-size:11px;display:none;line-height:1}
+#searchClear.show{display:block}
+@media(max-width:899px){
+  #searchWrap{padding:0 8px 2px}
+  #searchBox{font-size:10px;min-height:26px}
+  #searchClear{font-size:12px}
+}
+@media(min-width:900px){
+  #searchWrap{padding:2px 16px 4px}
+  #searchBox{font-size:12px;min-height:28px}
+  #searchClear{font-size:14px}
+}
+
+/* ── Stats dashboard in history panel ── */
+#histStats{padding:10px 12px;border-bottom:1px solid #18243a;background:#0a1020;
+  display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.histStat{flex:1;min-width:70px;text-align:center}
+.histStat .n{font-size:16px;color:#f5a623;font-weight:bold;display:block;line-height:1.1}
+.histStat .l{font-size:7px;color:#3a5060;letter-spacing:1px;display:block;margin-top:2px}
+
 /* ── Fullscreen camera viewer ── */
 #camFullscreen{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.95);
   flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
@@ -435,6 +498,8 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
       <li><span class="wicon">⚠️</span><span class="wtxt"><b>FRA Crossing Data</b> — safety equipment, traffic counts, quiet zones &amp; accident reports</span></li>
       <li><span class="wicon">⛈</span><span class="wtxt"><b>Weather Alerts</b> — NWS severe weather warnings for the corridor in real time</span></li>
       <li><span class="wicon">🌧</span><span class="wtxt"><b>Rain Radar &amp; Maps</b> — satellite, OpenRailwayMap, street, dark mode &amp; precipitation</span></li>
+      <li><span class="wicon">🚨</span><span class="wtxt"><b>Approach Alerts</b> — visual banner &amp; optional chime when a train is within 2 mi of your station</span></li>
+      <li><span class="wicon">📊</span><span class="wtxt"><b>Trip Stats &amp; Search</b> — daily/weekly counts, top operator, peak hour; filter schedule by name or cargo</span></li>
     </ul>
     <button id="welcomeBtn">LET'S GO</button>
     <label class="wcheck"><input type="checkbox" id="welcomeHide"> Don't show this again</label>
@@ -448,6 +513,29 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   <div class="cam-meta" id="camFsMeta"></div>
   <img id="camFsImg" src="" alt="Camera"/>
   <div class="cam-refresh">Live snapshot · auto-refreshes every 10s · tap anywhere to close</div>
+</div>
+
+<!-- KEYBOARD SHORTCUTS HELP -->
+<div id="helpDialog">
+  <div id="helpBox">
+    <h2>⌨️ KEYBOARD SHORTCUTS</h2>
+    <table>
+      <tr><td><kbd>L</kbd></td><td>Toggle LIVE mode</td></tr>
+      <tr><td><kbd>F</kbd></td><td>Toggle fullscreen map</td></tr>
+      <tr><td><kbd>M</kbd></td><td>Follow "me" / locate GPS</td></tr>
+      <tr><td><kbd>H</kbd></td><td>Open train log / history</td></tr>
+      <tr><td><kbd>R</kbd></td><td>Toggle rain radar</td></tr>
+      <tr><td><kbd>X</kbd></td><td>Toggle railway crossings</td></tr>
+      <tr><td><kbd>C</kbd></td><td>Toggle traffic cameras</td></tr>
+      <tr><td><kbd>D</kbd></td><td>Toggle distance rings</td></tr>
+      <tr><td><kbd>N</kbd></td><td>Toggle approach alert sound</td></tr>
+      <tr><td><kbd>1</kbd> – <kbd>4</kbd></td><td>Switch map layer (ORM/SAT/OSM/Dark)</td></tr>
+      <tr><td><kbd>/</kbd></td><td>Focus search box</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Close dialogs · clear search · stop follow</td></tr>
+      <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+    </table>
+    <button id="helpClose">GOT IT</button>
+  </div>
 </div>
 
 <div id="app">
@@ -492,6 +580,7 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         <button id="btnFullscreen" title="Fullscreen map">⛶</button>
       </div>
       <div id="followBadge">🎯 FOLLOWING — tap to stop</div>
+      <div id="approachAlert" title="Click to dismiss">🚨 TRAIN APPROACHING</div>
       <select id="stationPicker"></select>
       <div id="layertoggle">
         <button id="btnOrm">🛤 ORM</button>
@@ -501,6 +590,8 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         <button id="btnWeather">🌧 RAIN</button>
         <button id="btnCrossings" class="on">⚠️ XING</button>
         <button id="btnCameras">📹 CAM</button>
+        <button id="btnRings">⭕ RING</button>
+        <button id="btnSound">🔔 ALERT</button>
       </div>
     </div>
 
@@ -510,6 +601,12 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
       <h2>🕐 TRAIN LOG</h2>
       <span id="histCount" style="font-size:10px;color:#3a5060"></span>
       <button id="histClose">✕ CLOSE</button>
+    </div>
+    <div id="histStats">
+      <div class="histStat"><span class="n" id="statToday">0</span><span class="l">TODAY</span></div>
+      <div class="histStat"><span class="n" id="statWeek">0</span><span class="l">7 DAYS</span></div>
+      <div class="histStat"><span class="n" id="statTop">—</span><span class="l">TOP OP</span></div>
+      <div class="histStat"><span class="n" id="statPeak">—</span><span class="l">PEAK HR</span></div>
     </div>
     <div id="histList"><div class="hist-empty">No trains logged yet.<br>Trains are automatically logged<br>when they pass your position.</div></div>
     <div id="histFooter">
@@ -543,9 +640,15 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         <button id="fFec">FEC</button>
         <button id="fCsx">CSX</button>
       </div>
+      <div id="searchWrap">
+        <input id="searchBox" type="search" placeholder="🔍 Search train, cargo, direction…" autocomplete="off"/>
+        <button id="searchClear" title="Clear">✕</button>
+      </div>
       <div id="listscroll"></div>
-      <div id="panelFooter" style="padding:4px 8px;border-top:1px solid #18243a;flex-shrink:0;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:6px;color:#1a2a38;letter-spacing:1px">SAT:ESRI · LIVE:AMTRAKER · SCHED:TRI-RAIL.COM</span>
+      <div id="panelFooter" style="padding:4px 8px;border-top:1px solid #18243a;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:6px">
+        <span style="font-size:6px;color:#1a2a38;letter-spacing:1px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">SAT:ESRI · LIVE:AMTRAKER · SCHED:TRI-RAIL.COM</span>
+        <button id="helpBtn" title="Keyboard shortcuts" style="background:#0b1020;border:1px solid #3a5060;color:#a0c4ff;
+          padding:3px 8px;border-radius:4px;font-size:9px;min-height:24px">⌨️</button>
         <button id="histBtn" style="background:#0b1020;border:1px solid #3a5060;color:#a0c4ff;
           padding:3px 8px;border-radius:4px;font-size:9px;min-height:24px">🕐 LOG</button>
       </div>
@@ -1729,10 +1832,58 @@ function checkPassingTrains(sM) {
   }
 }
 
+// Compute rollup stats from the trip log
+function computeHistStats() {
+  const now    = new Date();
+  const today  = now.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"2-digit"});
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+
+  let todayCount = 0, weekCount = 0;
+  const opCount = {}; // category -> count
+  const hourCount = new Array(24).fill(0);
+
+  for (const e of tripLog) {
+    if (e.date === today) todayCount++;
+    // Approximate week filter — since we only have locale date strings, parse gracefully
+    const parsed = Date.parse(e.date + " " + (e.time||"00:00:00"));
+    if (!isNaN(parsed) && now.getTime() - parsed < weekMs) weekCount++;
+    if (e.cat) opCount[e.cat] = (opCount[e.cat]||0) + 1;
+    if (e.time) {
+      const h = parseInt(e.time.split(":")[0], 10);
+      if (h >= 0 && h < 24) hourCount[h]++;
+    }
+  }
+
+  let topOp = "—", topN = 0;
+  for (const [k,v] of Object.entries(opCount)) if (v > topN) { topOp = k; topN = v; }
+
+  let peakHr = -1, peakN = 0;
+  for (let h = 0; h < 24; h++) if (hourCount[h] > peakN) { peakN = hourCount[h]; peakHr = h; }
+  const peakStr = peakHr < 0 ? "—" : `${String(peakHr).padStart(2,"0")}:00`;
+
+  // Short form: "Tri-Rail" -> "TRI", etc.
+  const SHORT = {"Tri-Rail":"TRI","Amtrak":"AMTK","Brightline":"BL","FEC Freight":"FEC","CSX Freight":"CSX"};
+  const topShort = SHORT[topOp] || topOp.slice(0,4).toUpperCase();
+
+  return {todayCount, weekCount, topOp:topShort, peakStr};
+}
+
 function updateHistUI() {
-  const el = document.getElementById("histList");
+  const el  = document.getElementById("histList");
   const cnt = document.getElementById("histCount");
   if (cnt) cnt.textContent = tripLog.length ? `${tripLog.length} trains` : "";
+
+  // Update stats row
+  const s = computeHistStats();
+  const sToday = document.getElementById("statToday");
+  const sWeek  = document.getElementById("statWeek");
+  const sTop   = document.getElementById("statTop");
+  const sPeak  = document.getElementById("statPeak");
+  if (sToday) sToday.textContent = s.todayCount;
+  if (sWeek)  sWeek.textContent  = s.weekCount;
+  if (sTop)   sTop.textContent   = s.topOp;
+  if (sPeak)  sPeak.textContent  = s.peakStr;
+
   if (!el) return;
   if (!tripLog.length) {
     el.innerHTML = `<div class="hist-empty">No trains logged yet.<br>Trains are automatically logged<br>when they pass near your position.</div>`;
@@ -1758,11 +1909,153 @@ function updateHistUI() {
 updateHistUI();
 
 // ══════════════════════════════════════════════════════════
+// STATION DISTANCE RINGS (1 mi / 3 mi / 5 mi)
+// Helps visualize how close trains are to your selected station.
+// ══════════════════════════════════════════════════════════
+let ringsEnabled = localStorage.getItem("rail_rings") === "1";
+const ringStyles = [
+  {mi:1, color:"#00ee77", weight:1.5, dash:"2,4"},
+  {mi:3, color:"#f5a623", weight:1.2, dash:"2,5"},
+  {mi:5, color:"#ff3d4d", weight:1.0, dash:"2,6"},
+];
+const ringLayer = L.layerGroup();
+function buildRings() {
+  ringLayer.clearLayers();
+  ringStyles.forEach(r => {
+    L.circle([YOU_LAT, YOU_LNG], {
+      radius: r.mi * 1609.34,
+      color: r.color, weight: r.weight, opacity: 0.55,
+      fillColor: r.color, fillOpacity: 0.02,
+      dashArray: r.dash, interactive: false,
+    }).addTo(ringLayer);
+    // Label — place due south of station so they don't overlap the station marker
+    L.marker([YOU_LAT - (r.mi*0.0145), YOU_LNG], {
+      icon: L.divIcon({
+        html: `<div style="font-size:8px;color:${r.color};font-family:monospace;
+          background:rgba(0,0,0,.6);padding:1px 4px;border-radius:3px;
+          border:1px solid ${r.color}66;white-space:nowrap">${r.mi} mi</div>`,
+        className:"", iconSize:[30,14], iconAnchor:[15,7]
+      }),
+      interactive: false, zIndexOffset: 30,
+    }).addTo(ringLayer);
+  });
+}
+function applyRings() {
+  buildRings();
+  if (ringsEnabled) { ringLayer.addTo(map); }
+  else { if (map.hasLayer(ringLayer)) map.removeLayer(ringLayer); }
+  const btn = document.getElementById("btnRings");
+  if (btn) btn.classList.toggle("on", ringsEnabled);
+}
+function toggleRings() {
+  ringsEnabled = !ringsEnabled;
+  localStorage.setItem("rail_rings", ringsEnabled ? "1" : "0");
+  applyRings();
+}
+applyRings();
+
+// ══════════════════════════════════════════════════════════
+// APPROACH ALERT — notifies when a train is within 2mi of your station
+// ══════════════════════════════════════════════════════════
+const APPROACH_MI      = 2;     // miles from station to trigger alert
+const APPROACH_DEG_SQ  = (APPROACH_MI / 69) * (APPROACH_MI / 69); // ~rough degree-squared
+let soundEnabled       = localStorage.getItem("rail_sound") === "1";
+let lastAlertedTrain   = null;  // ID of train currently triggering the alert
+let dismissedTrainId   = null;  // user dismissed this train's alert — suppress until a different train is closest
+let lastAlertSoundAt   = 0;     // timestamp of last sound chime
+let audioCtx           = null;
+
+function playChime() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
+    // Two quick bell-like tones
+    [880, 660].forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + i*0.22);
+      gain.gain.linearRampToValueAtTime(0.25, now + i*0.22 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i*0.22 + 0.35);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now + i*0.22);
+      osc.stop(now + i*0.22 + 0.4);
+    });
+  } catch(e) { /* audio failed — silent */ }
+}
+
+function approachCheck(sM) {
+  let best = null, bestDistSq = APPROACH_DEG_SQ;
+  // Check live trains
+  for (const [id, lt] of Object.entries(liveData)) {
+    const dLat = lt.lat - YOU_LAT, dLng = lt.lng - YOU_LNG;
+    const dSq  = dLat*dLat + dLng*dLng;
+    if (dSq < bestDistSq) {
+      bestDistSq = dSq;
+      best = {id, name:lt.name || lt.num, dir:lt.dir, type:lt.type,
+              lat:lt.lat, lng:lt.lng, live:true};
+    }
+  }
+  // Check scheduled trains
+  for (const t of ALL) {
+    if (!onTrack(t, sM)) continue;
+    const pos  = schedPos(t, sM);
+    const dLat = pos.lat - YOU_LAT, dLng = pos.lng - YOU_LNG;
+    const dSq  = dLat*dLat + dLng*dLng;
+    if (dSq < bestDistSq) {
+      bestDistSq = dSq;
+      best = {id:"sch_"+t.train+t.time, name:t.train, dir:t.dir, type:t.type,
+              lat:pos.lat, lng:pos.lng, live:false};
+    }
+  }
+  const banner = document.getElementById("approachAlert");
+  if (!banner) return;
+  if (best) {
+    // Reset dismissal when a different train becomes closest
+    if (dismissedTrainId && dismissedTrainId !== best.id) dismissedTrainId = null;
+    if (dismissedTrainId === best.id) {
+      banner.classList.remove("show");
+      return;
+    }
+    const distMi = Math.sqrt(bestDistSq) * 69;
+    const arrow  = best.dir === "SB" ? "↓" : "↑";
+    const srcTag = best.live ? "📡" : "📅";
+    banner.textContent = `🚨 ${srcTag} ${best.name} ${arrow} — ${distMi.toFixed(1)} mi away`;
+    banner.style.color = "#fff";
+    banner.classList.add("show");
+    // New train triggered — chime
+    if (soundEnabled && best.id !== lastAlertedTrain && Date.now() - lastAlertSoundAt > 20000) {
+      playChime();
+      lastAlertSoundAt = Date.now();
+    }
+    lastAlertedTrain = best.id;
+  } else {
+    banner.classList.remove("show");
+    lastAlertedTrain = null;
+    dismissedTrainId = null;
+  }
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem("rail_sound", soundEnabled ? "1" : "0");
+  const btn = document.getElementById("btnSound");
+  if (btn) {
+    btn.classList.toggle("on", soundEnabled);
+    btn.textContent = soundEnabled ? "🔔 ALERT●" : "🔔 ALERT";
+  }
+  // Prime audio context on user gesture
+  if (soundEnabled) playChime();
+}
+
+// ══════════════════════════════════════════════════════════
 // STATE & BUTTON FUNCTIONS
 // ══════════════════════════════════════════════════════════
 let isLive = true, simSpeed = 1, simTime = new Date(), lastRealMs = Date.now();
 let curFilter = "all", liveData = {}, lastFetch = 0, apiGood = false;
 let desktopMode = false;
+let searchQuery = ""; // text filter for schedule list
 
 function goLive() {
   isLive=true; simTime=new Date(); lastRealMs=Date.now();
@@ -1810,6 +2103,21 @@ document.getElementById("btnOsm")  .addEventListener("click", () => setLayer("os
 document.getElementById("btnDark") .addEventListener("click", () => setLayer("dark"));
 document.getElementById("btnWeather").addEventListener("click", toggleWeather);
 document.getElementById("btnCameras").addEventListener("click", toggleCameras);
+document.getElementById("btnRings").addEventListener("click", toggleRings);
+document.getElementById("btnSound").addEventListener("click", toggleSound);
+// Set initial sound toggle visual state
+(function initSoundToggle() {
+  const btn = document.getElementById("btnSound");
+  if (btn) {
+    btn.classList.toggle("on", soundEnabled);
+    btn.textContent = soundEnabled ? "🔔 ALERT●" : "🔔 ALERT";
+  }
+})();
+// Dismiss approach alert on click — suppress until a different train becomes closest
+document.getElementById("approachAlert").addEventListener("click", function() {
+  this.classList.remove("show");
+  dismissedTrainId = lastAlertedTrain;
+});
 document.getElementById("btnCrossings").addEventListener("click", function() {
   crossingsEnabled = !crossingsEnabled;
   if (crossingsEnabled) {
@@ -1843,6 +2151,73 @@ document.getElementById("histClear").addEventListener("click", () => {
     tripLog = []; loggedIds.clear(); saveLog(); updateHistUI();
   }
 });
+// ── Search box wiring ───────────────────────────────────
+(function initSearch() {
+  const box = document.getElementById("searchBox");
+  const clr = document.getElementById("searchClear");
+  if (!box) return;
+  function update() {
+    searchQuery = box.value || "";
+    clr.classList.toggle("show", searchQuery.length > 0);
+  }
+  box.addEventListener("input", update);
+  clr.addEventListener("click", () => { box.value = ""; update(); box.focus(); });
+})();
+
+// ── Help dialog wiring ──────────────────────────────────
+function openHelp()  { document.getElementById("helpDialog").classList.add("open"); }
+function closeHelp() { document.getElementById("helpDialog").classList.remove("open"); }
+document.getElementById("helpBtn")  .addEventListener("click", openHelp);
+document.getElementById("helpClose").addEventListener("click", closeHelp);
+document.getElementById("helpDialog").addEventListener("click", e => {
+  if (e.target.id === "helpDialog") closeHelp();
+});
+
+// ── Keyboard shortcuts ─────────────────────────────────
+document.addEventListener("keydown", e => {
+  // Ignore when typing into inputs / selects / textareas / contenteditable
+  const tag = (e.target && e.target.tagName || "").toLowerCase();
+  const typing = tag === "input" || tag === "textarea" || tag === "select" ||
+                 (e.target && e.target.isContentEditable);
+  // Always allow Escape to work
+  if (e.key === "Escape") {
+    // Close help
+    if (document.getElementById("helpDialog").classList.contains("open")) { closeHelp(); return; }
+    // Close history
+    if (document.getElementById("historyPanel").classList.contains("open")) {
+      document.getElementById("historyPanel").classList.remove("open"); return;
+    }
+    // Dismiss alert
+    const alertEl = document.getElementById("approachAlert");
+    if (alertEl.classList.contains("show")) { alertEl.classList.remove("show"); return; }
+    // Clear search
+    const box = document.getElementById("searchBox");
+    if (box && box.value) { box.value = ""; searchQuery = ""; document.getElementById("searchClear").classList.remove("show"); box.blur(); return; }
+    // Stop follow
+    if (followId) { stopFollow(); return; }
+    return;
+  }
+  if (typing) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  switch (e.key.toLowerCase()) {
+    case "l": goLive(); break;
+    case "f": document.getElementById("btnFullscreen").click(); break;
+    case "m": document.getElementById("locateBtn").click(); break;
+    case "h": document.getElementById("histBtn").click(); break;
+    case "r": toggleWeather(); break;
+    case "x": document.getElementById("btnCrossings").click(); break;
+    case "c": toggleCameras(); break;
+    case "d": toggleRings(); break;
+    case "n": toggleSound(); break;
+    case "1": setLayer("orm"); break;
+    case "2": setLayer("sat"); break;
+    case "3": setLayer("osm"); break;
+    case "4": setLayer("dark"); break;
+    case "/": e.preventDefault(); const b = document.getElementById("searchBox"); if (b) b.focus(); break;
+    case "?": openHelp(); break;
+  }
+});
+
 document.getElementById("histExport").addEventListener("click", () => {
   const csv = ["Date,Time,Train,Category,Direction,Cargo,Lat,Lng,Source"]
     .concat(tripLog.map(e =>
@@ -1928,6 +2303,8 @@ document.getElementById("btnFullscreen").addEventListener("click", function() {
     document.querySelector(".nlabel").textContent = "⚡ NEXT AT " + short;
     // Rebuild track fractions for new station
     rebuildTrackEngine();
+    // Rebuild distance rings around new station
+    applyRings();
     // Center map on new station
     map.setView([st.lat, st.lng], 12, {animate:true});
   });
@@ -2031,6 +2408,9 @@ function render() {
   // Auto-log passing trains (feature 15)
   checkPassingTrains(sM);
 
+  // Approach alert — train within 2mi of your station
+  approachCheck(sM);
+
   // ── On-track bar ───────────────────────────────────────
   const schOT   = ALL.filter(t=>onTrack(t,sM));
   const liveCnt = Object.keys(liveData).length;
@@ -2053,7 +2433,16 @@ function render() {
   }
 
   // ── Next train (adjusted for selected station) ────────
-  const filt     = ALL.filter(t=>curFilter==="all"||t.type===curFilter);
+  const q = (searchQuery || "").toLowerCase().trim();
+  const filt = ALL.filter(t => {
+    if (curFilter !== "all" && t.type !== curFilter) return false;
+    if (!q) return true;
+    // Match train name, category, direction, or cargo text
+    const cargo = (getCargo(t.train) || "").toLowerCase();
+    const dirFull = t.dir === "SB" ? "south southbound sb" : "north northbound nb";
+    const hay = `${t.train} ${t.cat} ${t.track} ${dirFull} ${cargo}`.toLowerCase();
+    return hay.includes(q);
+  });
   const withAdj  = filt.map(t=>({...t, adjMins:stationMins(t), adjTime:minsToTime(stationMins(t))}))
     .sort((a,b)=>a.adjMins-b.adjMins);
   const upcoming = withAdj.filter(t=>t.adjMins>sM);
