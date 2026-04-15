@@ -33,10 +33,37 @@ A live, mobile-optimized train tracker for the South Florida rail corridor — b
 - 📦 **Cargo info** — what each freight train is hauling
 - 🕐 **Trip log** — auto-logs every train that passes near your position with CSV export
 
+### Personalization *(v1.4)*
+- ⭐ **Favorite trains** — star any schedule row to pin it; favorites float to the top of the upcoming list and persist across sessions
+- 🔔 **Approach audio alert** — optional chime when a scheduled train is within 60 seconds of your selected station
+- 📊 **Trip log statistics** — totals, direction split, operator breakdown, most-seen train and daily pass counts
+- 🔗 **Share current view** — copy a URL that opens the app at your chosen station and filter
+- 🌅 **Daylight indicator** — sunrise / day / sunset / night badge computed live from solar elevation
+- 📰 **Live updates log** — in-app changelog panel (tap **UPDATES** in the footer) so every release's changes are visible from the front page
+
 ### App
 - 📱 **PWA** — installable on iPhone/Android home screen, works offline
 - 🔒 **Password protected** — session-based access control
 - 👋 **Welcome overlay** — feature tour for first-time users
+
+---
+
+## Changelog
+
+### v1.4.0 — Personalization & Alerts
+Favorite trains, train approach audio alerts, trip log statistics dashboard, share-current-view URLs, live daylight indicator, and the new in-app **UPDATES** panel so the changelog is accessible from the front page.
+
+### v1.3.0 — Cameras & FRA Data
+FDOT traffic cameras with fullscreen viewer and FRA Crossing Inventory data replacing OSM crossings (safety equipment, traffic counts, quiet zones, accident history).
+
+### v1.2.0 — Live Data Expansion
+Tri-Rail live GPS via GTFS-RT, NWS severe weather alert polygons, satellite promoted to default basemap.
+
+### v1.1.0 — Navigation Upgrades
+Follow-a-train mode, fullscreen map, station picker with adjusted arrival times, OSM track alignment fixes.
+
+### v1.0.0 — First Public Release
+Live Amtrak + Brightline GPS, five-operator schedule simulation, multi-layer map with rain radar, auto-logging trip history with CSV export.
 
 ---
 
