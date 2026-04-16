@@ -6,6 +6,21 @@ A live, mobile-optimized train tracker for the South Florida rail corridor — b
 
 ---
 
+## What's New — April 2026
+
+### v2.1 — Search, Alerts & Power User Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔍 **Train Search** | Instant search/filter — find any train by name, number, or operator type. Clear button and keyboard shortcut (`/`) for quick access. |
+| 🔔 **Arrival Notifications** | Toast notifications + browser push alerts when a train is within 5 minutes of your selected station. Never miss a train again. |
+| 📏 **Distance Display** | Active trains now show distance in miles from your selected station directly in the train list. |
+| ⌨ **Keyboard Shortcuts** | Full keyboard control for power users — `L` live, `F` fullscreen, `W` weather, `C` cameras, `H` log, `1-5` filters, `?` help overlay. |
+| 📊 **Live Statistics** | Real-time train count in the panel footer — total active, live GPS, and schedule-based trains at a glance. |
+| 🔄 **Refresh Countdown** | Visual progress bar showing time until the next API data refresh (30s cycle). Turns green on refresh. |
+
+---
+
 ## Features
 
 ### Live Tracking
@@ -14,6 +29,7 @@ A live, mobile-optimized train tracker for the South Florida rail corridor — b
 - 🚂 **All 5 operators** — Tri-Rail, Amtrak, Brightline, FEC Freight, CSX Freight
 - ⚡ **Speed display** — live mph on every train marker
 - 🎯 **Follow mode** — tap a train to lock the camera and follow it across the map
+- 🔔 **Arrival alerts** — toast and browser notifications when trains approach your station
 
 ### Map & Layers
 - 🛰 **Satellite / ORM / OSM / Dark maps** — switchable tile layers (satellite default)
@@ -30,6 +46,8 @@ A live, mobile-optimized train tracker for the South Florida rail corridor — b
 ### Schedule & Station
 - 📍 **Station picker** — set any station from Mangonia Park to Miami Airport as your home station
 - ⏱ **Adjusted arrival times** — schedule times recalculated based on your selected station
+- 🔍 **Train search** — instantly filter the train list by name, number, or operator
+- 📏 **Distance display** — see how far active trains are from your station in miles
 - 📦 **Cargo info** — what each freight train is hauling
 - 🕐 **Trip log** — auto-logs every train that passes near your position with CSV export
 
@@ -37,6 +55,9 @@ A live, mobile-optimized train tracker for the South Florida rail corridor — b
 - 📱 **PWA** — installable on iPhone/Android home screen, works offline
 - 🔒 **Password protected** — session-based access control
 - 👋 **Welcome overlay** — feature tour for first-time users
+- ⌨ **Keyboard shortcuts** — full keyboard control for desktop power users (press `?` for help)
+- 📊 **Live statistics** — real-time train counts in the panel footer
+- 🔄 **Refresh countdown** — visual indicator for API polling cycle
 
 ---
 

@@ -112,6 +112,15 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
 .otlabel{color:#ff8c00;letter-spacing:1px}
 #otchips{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
 .chip{font-size:7px;padding:1px 4px;border-radius:3px;border:1px solid;white-space:nowrap}
+#searchWrap{display:flex;align-items:center;flex-shrink:0;gap:4px}
+#trainSearch{flex:1;background:#0b1020;border:1px solid #18243a;color:#c8d6e5;
+  border-radius:20px;font-family:monospace;outline:none;letter-spacing:1px;
+  transition:border-color .2s}
+#trainSearch:focus{border-color:#00d4ff}
+#trainSearch::placeholder{color:#2a3a50}
+#searchClear{background:transparent;border:1px solid #2a3a50;color:#3a5060;border-radius:50%;
+  display:none;cursor:pointer;font-size:10px;line-height:1;flex-shrink:0}
+#searchClear.vis{display:flex;align-items:center;justify-content:center}
 #filters{display:flex;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 #filters::-webkit-scrollbar{display:none}
 #filters button{border:1px solid #18243a;background:transparent;color:#3a5060;
@@ -177,6 +186,9 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   #ncd{font-size:13px}
   #otbar{margin:0 8px 2px;padding:3px 10px}
   .otlabel{font-size:7px}
+  #searchWrap{padding:3px 8px}
+  #trainSearch{padding:4px 10px;font-size:9px;min-height:26px}
+  #searchClear{width:20px;height:20px;min-height:20px;min-width:20px;padding:0}
   #filters{padding:2px 8px;gap:3px}
   #filters button{font-size:9px;padding:3px 10px;min-height:26px}
   #listscroll{padding:2px 8px 8px}
@@ -231,6 +243,9 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   #ncd{font-size:20px}
   #otbar{margin:0 16px 6px;padding:8px 16px}
   .otlabel{font-size:9px}
+  #searchWrap{padding:6px 16px}
+  #trainSearch{padding:6px 14px;font-size:12px;min-height:34px}
+  #searchClear{width:26px;height:26px;min-height:26px;min-width:26px;padding:0}
   #filters{padding:6px 16px;gap:8px}
   #filters button{font-size:12px;padding:6px 16px;min-height:34px}
   #listscroll{padding:4px 16px 16px}
@@ -382,6 +397,42 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   cursor:pointer}
 #welcomeBox .wcheck{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:9px;color:#3a5060}
 #welcomeBox .wcheck input{accent-color:#f5a623}
+/* ── Toast notifications ── */
+#toastContainer{position:fixed;top:60px;right:10px;z-index:7500;display:flex;
+  flex-direction:column;gap:6px;pointer-events:none;max-width:320px}
+.toast{background:rgba(11,16,32,.95);border:1px solid #f5a623;border-radius:8px;
+  padding:10px 14px;font-family:'Courier New',monospace;color:#c8d6e5;font-size:11px;
+  pointer-events:auto;animation:toastIn .3s ease-out;backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);box-shadow:0 4px 20px rgba(0,0,0,.6);
+  display:flex;align-items:flex-start;gap:8px;cursor:pointer;transition:opacity .3s}
+.toast.out{opacity:0;transform:translateX(20px)}
+.toast .t-icon{font-size:18px;flex-shrink:0}
+.toast .t-body{flex:1;min-width:0}
+.toast .t-title{color:#fff;font-weight:bold;font-size:11px;margin-bottom:2px}
+.toast .t-msg{color:#6a8090;font-size:9px}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+
+/* ── Keyboard shortcuts help overlay ── */
+#kbdHelp{display:none;position:fixed;inset:0;z-index:8500;background:rgba(0,0,0,.7);
+  align-items:center;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#kbdHelp.open{display:flex}
+#kbdBox{background:#0b1020;border:1px solid #1e2d4a;border-radius:14px;padding:24px;
+  max-width:360px;width:90%;font-family:'Courier New',monospace;color:#c8d6e5;
+  box-shadow:0 8px 40px rgba(0,0,0,.7);max-height:80vh;overflow-y:auto}
+#kbdBox h3{margin:0 0 12px;font-size:14px;color:#fff;letter-spacing:3px;text-align:center}
+.kbd-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #18243a;font-size:11px}
+.kbd-key{background:#182030;border:1px solid #2a3a50;border-radius:4px;padding:2px 8px;
+  color:#f5a623;font-weight:bold;font-size:10px;min-width:24px;text-align:center}
+.kbd-desc{color:#6a8090}
+
+/* ── Refresh countdown ── */
+#refreshBar{height:2px;background:#18243a;flex-shrink:0;overflow:hidden;position:relative}
+#refreshProgress{height:100%;background:#00d4ff;transition:width 1s linear;width:0%}
+
+/* ── Daily stats ── */
+#dailyStats{font-size:7px;color:#3a5060;letter-spacing:1px;display:flex;gap:6px;align-items:center}
+#dailyStats .stat-num{color:#f5a623;font-weight:bold}
+
 @media(min-width:900px){#stationPicker{font-size:12px;max-width:220px;top:42px;padding:6px 10px}}
 
 
@@ -435,6 +486,9 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
       <li><span class="wicon">⚠️</span><span class="wtxt"><b>FRA Crossing Data</b> — safety equipment, traffic counts, quiet zones &amp; accident reports</span></li>
       <li><span class="wicon">⛈</span><span class="wtxt"><b>Weather Alerts</b> — NWS severe weather warnings for the corridor in real time</span></li>
       <li><span class="wicon">🌧</span><span class="wtxt"><b>Rain Radar &amp; Maps</b> — satellite, OpenRailwayMap, street, dark mode &amp; precipitation</span></li>
+      <li><span class="wicon">🔍</span><span class="wtxt"><b>Train Search</b> — instantly filter trains by name, number, or operator</span></li>
+      <li><span class="wicon">🔔</span><span class="wtxt"><b>Arrival Alerts</b> — toast &amp; browser notifications when trains approach your station</span></li>
+      <li><span class="wicon">⌨</span><span class="wtxt"><b>Keyboard Shortcuts</b> — press <b>?</b> to see all shortcuts for power users</span></li>
     </ul>
     <button id="welcomeBtn">LET'S GO</button>
     <label class="wcheck"><input type="checkbox" id="welcomeHide"> Don't show this again</label>
@@ -448,6 +502,32 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   <div class="cam-meta" id="camFsMeta"></div>
   <img id="camFsImg" src="" alt="Camera"/>
   <div class="cam-refresh">Live snapshot · auto-refreshes every 10s · tap anywhere to close</div>
+</div>
+
+<!-- TOAST NOTIFICATIONS -->
+<div id="toastContainer"></div>
+
+<!-- KEYBOARD SHORTCUTS HELP -->
+<div id="kbdHelp">
+  <div id="kbdBox">
+    <h3>KEYBOARD SHORTCUTS</h3>
+    <div class="kbd-row"><span class="kbd-key">L</span><span class="kbd-desc">Toggle live mode</span></div>
+    <div class="kbd-row"><span class="kbd-key">F</span><span class="kbd-desc">Fullscreen map</span></div>
+    <div class="kbd-row"><span class="kbd-key">W</span><span class="kbd-desc">Toggle rain radar</span></div>
+    <div class="kbd-row"><span class="kbd-key">C</span><span class="kbd-desc">Toggle cameras</span></div>
+    <div class="kbd-row"><span class="kbd-key">X</span><span class="kbd-desc">Toggle crossings</span></div>
+    <div class="kbd-row"><span class="kbd-key">H</span><span class="kbd-desc">Open train log</span></div>
+    <div class="kbd-row"><span class="kbd-key">/</span><span class="kbd-desc">Focus search box</span></div>
+    <div class="kbd-row"><span class="kbd-key">1–5</span><span class="kbd-desc">Filter: Tri / Amtrak / BL / FEC / CSX</span></div>
+    <div class="kbd-row"><span class="kbd-key">0</span><span class="kbd-desc">Show all trains</span></div>
+    <div class="kbd-row"><span class="kbd-key">Esc</span><span class="kbd-desc">Close overlays / clear search</span></div>
+    <div class="kbd-row"><span class="kbd-key">?</span><span class="kbd-desc">Toggle this help</span></div>
+    <div style="text-align:center;margin-top:14px">
+      <button onclick="document.getElementById('kbdHelp').classList.remove('open')"
+        style="background:#f5a623;border:none;color:#000;padding:8px 24px;border-radius:6px;
+        font-family:monospace;font-size:11px;font-weight:bold;letter-spacing:1px;cursor:pointer">CLOSE</button>
+    </div>
+  </div>
 </div>
 
 <div id="app">
@@ -535,6 +615,10 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         <div class="otlabel">● ON TRACK NOW</div>
         <div id="otchips"></div>
       </div>
+      <div id="searchWrap">
+        <input id="trainSearch" type="text" placeholder="Search trains..." autocomplete="off" spellcheck="false"/>
+        <button id="searchClear">✕</button>
+      </div>
       <div id="filters">
         <button id="fAll"  class="on">All</button>
         <button id="fTri">Tri-Rail</button>
@@ -543,11 +627,20 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         <button id="fFec">FEC</button>
         <button id="fCsx">CSX</button>
       </div>
+      <div id="refreshBar"><div id="refreshProgress"></div></div>
       <div id="listscroll"></div>
-      <div id="panelFooter" style="padding:4px 8px;border-top:1px solid #18243a;flex-shrink:0;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:6px;color:#1a2a38;letter-spacing:1px">SAT:ESRI · LIVE:AMTRAKER · SCHED:TRI-RAIL.COM</span>
-        <button id="histBtn" style="background:#0b1020;border:1px solid #3a5060;color:#a0c4ff;
-          padding:3px 8px;border-radius:4px;font-size:9px;min-height:24px">🕐 LOG</button>
+      <div id="panelFooter" style="padding:4px 8px;border-top:1px solid #18243a;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:4px">
+        <div id="dailyStats">
+          <span>TODAY: <span class="stat-num" id="statTotal">0</span></span>
+          <span>LIVE: <span class="stat-num" id="statLive">0</span></span>
+          <span>SCHED: <span class="stat-num" id="statSched">0</span></span>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button id="kbdBtn" title="Keyboard shortcuts (?)" style="background:#0b1020;border:1px solid #2a3a50;color:#3a5060;
+            padding:3px 6px;border-radius:4px;font-size:9px;min-height:24px">⌨</button>
+          <button id="histBtn" style="background:#0b1020;border:1px solid #3a5060;color:#a0c4ff;
+            padding:3px 8px;border-radius:4px;font-size:9px;min-height:24px">🕐 LOG</button>
+        </div>
       </div>
     </div>
 
@@ -2052,6 +2145,16 @@ function render() {
     otbar.style.display="none";
   }
 
+  // ── Check approaching trains for notifications ────────
+  if (isLive) checkApproachingTrains(sM);
+
+  // ── Daily stats ────────────────────────────────────────
+  const liveCount  = Object.keys(liveData).length;
+  const schedCount = schOT.length;
+  document.getElementById("statTotal").textContent = liveCount + schedCount;
+  document.getElementById("statLive").textContent  = liveCount;
+  document.getElementById("statSched").textContent = schedCount;
+
   // ── Next train (adjusted for selected station) ────────
   const filt     = ALL.filter(t=>curFilter==="all"||t.type===curFilter);
   const withAdj  = filt.map(t=>({...t, adjMins:stationMins(t), adjTime:minsToTime(stationMins(t))}))
@@ -2071,11 +2174,20 @@ function render() {
 
   // ── Schedule list ──────────────────────────────────────
   const passed = withAdj.filter(t=>t.adjMins<=sM-1);
+
+  // Apply search filter
+  const matchSearch = t => !searchQuery ||
+    t.train.toLowerCase().includes(searchQuery) ||
+    t.cat.toLowerCase().includes(searchQuery) ||
+    (t.dir||"").toLowerCase().includes(searchQuery);
+
+  const upFiltered = upcoming.filter(matchSearch);
+  const passFiltered = passed.filter(matchSearch);
   let html = "";
 
-  if (upcoming.length) {
-    html += `<div class="sec">UPCOMING — ${upcoming.length}</div>`;
-    upcoming.slice(0,22).forEach((t,i) => {
+  if (upFiltered.length) {
+    html += `<div class="sec">UPCOMING — ${upFiltered.length}${searchQuery?" (filtered)":""}</div>`;
+    upFiltered.slice(0,22).forEach((t,i) => {
       const col    = tCol(t);
       const ot     = onTrack(t,sM);
       const hasLive= freshLive && liveTypes.has(t.type);
@@ -2084,13 +2196,22 @@ function render() {
       const cargo  = getCargo(t.train);
       const spd    = Math.round(SPEED_MPH[t.type] || 50);
       const logoHtml = `<img class="op-logo" src="${logoUrl}" alt="${t.cat}"/>`;
+      // Calculate distance from station if train is on track
+      let distStr = "";
+      if (ot) {
+        const pos = schedPos(t, sM);
+        const dLat = pos.lat - STAT_LAT;
+        const dLng = (pos.lng - STAT_LNG) * Math.cos(STAT_LAT * Math.PI / 180);
+        const distMi = Math.sqrt(dLat*dLat + dLng*dLng) * 69;
+        distStr = `<span style="color:#00d4ff;font-size:8px"> · ${distMi.toFixed(1)}mi</span>`;
+      }
       html += `<div class="trow" id="row-${schId}" data-trainid="${schId}"
           style="${ot?'background:'+col+'0d;border-color:'+col+'44':''}">
         ${logoHtml}
         <div class="ttime">${t.adjTime}</div>
         <div class="tinfo">
           <div class="tname" style="color:${col}">${tEmoji(t)} ${t.train}</div>
-          <div class="tmeta">${t.dir==="SB"?"↓":"↑"} ${t.cat} · ${t.track==="fec"?"FEC":"CSX"} · <span style="color:#a78bfa">~${spd}mph</span></div>
+          <div class="tmeta">${t.dir==="SB"?"↓":"↑"} ${t.cat} · ${t.track==="fec"?"FEC":"CSX"} · <span style="color:#a78bfa">~${spd}mph</span>${distStr}</div>
           ${cargo?"<div class=\"cargo-tag\">"+cargo+"</div>":""}
         </div>
         ${ot?"<div class=\"tbadge\" style=\"color:"+col+";background:"+col+"20;border:1px solid "+col+"55\">"+
@@ -2098,9 +2219,9 @@ function render() {
       </div>`;
     });
   }
-  if (passed.length) {
-    html += `<div class="sec">PASSED TODAY — ${passed.length}</div>`;
-    passed.slice(-10).reverse().forEach(t => {
+  if (passFiltered.length) {
+    html += `<div class="sec">PASSED TODAY — ${passFiltered.length}${searchQuery?" (filtered)":""}</div>`;
+    passFiltered.slice(-10).reverse().forEach(t => {
       html += `<div class="prow">
         <div class="pdot"></div>
         <div class="ptime">${t.adjTime}</div>
@@ -2108,6 +2229,11 @@ function render() {
         <div class="pdir">${t.dir==="SB"?"↓":"↑"}</div>
       </div>`;
     });
+  }
+  if (searchQuery && !upFiltered.length && !passFiltered.length) {
+    html += `<div style="text-align:center;color:#2a3a50;font-size:11px;margin-top:30px;line-height:2">
+      No trains matching "<span style="color:#f5a623">${searchQuery}</span>"<br>
+      <span style="font-size:9px">Try a different search or clear the filter</span></div>`;
   }
   document.getElementById("listscroll").innerHTML = html;
 
@@ -2217,6 +2343,154 @@ function closeCamFullscreen() {
   clearInterval(camFsInterval);
   document.getElementById("camFsImg").src = "";
 }
+
+// ══════════════════════════════════════════════════════════
+// TRAIN SEARCH — filter train list by name/number
+// ══════════════════════════════════════════════════════════
+let searchQuery = "";
+const trainSearchEl = document.getElementById("trainSearch");
+const searchClearEl = document.getElementById("searchClear");
+
+trainSearchEl.addEventListener("input", function() {
+  searchQuery = this.value.trim().toLowerCase();
+  searchClearEl.className = searchQuery ? "vis" : "";
+});
+searchClearEl.addEventListener("click", function() {
+  trainSearchEl.value = "";
+  searchQuery = "";
+  this.className = "";
+  trainSearchEl.focus();
+});
+
+// ══════════════════════════════════════════════════════════
+// TOAST NOTIFICATION SYSTEM
+// ══════════════════════════════════════════════════════════
+const toastContainer = document.getElementById("toastContainer");
+let toastCount = 0;
+
+function showToast(icon, title, msg, duration) {
+  duration = duration || 5000;
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.innerHTML = `<div class="t-icon">${icon}</div><div class="t-body">
+    <div class="t-title">${title}</div><div class="t-msg">${msg}</div></div>`;
+  el.addEventListener("click", () => { el.classList.add("out"); setTimeout(() => el.remove(), 300); });
+  toastContainer.appendChild(el);
+  toastCount++;
+  // Limit visible toasts
+  if (toastCount > 4) {
+    const first = toastContainer.firstChild;
+    if (first) { first.classList.add("out"); setTimeout(() => { first.remove(); toastCount--; }, 300); }
+  }
+  setTimeout(() => {
+    el.classList.add("out");
+    setTimeout(() => { el.remove(); toastCount--; }, 300);
+  }, duration);
+}
+
+// ── Train approach notifications ──
+let notifiedTrains = new Set();
+const NOTIFY_MINS = 5; // notify when train is within X minutes
+
+function checkApproachingTrains(sM) {
+  for (const t of ALL) {
+    const adjMins = stationMins(t);
+    const diff = adjMins - sM;
+    const id = t.train + "_" + t.time;
+    // Within NOTIFY_MINS minutes and hasn't been notified yet
+    if (diff > 0 && diff <= NOTIFY_MINS && !notifiedTrains.has(id)) {
+      notifiedTrains.add(id);
+      const col = tCol(t);
+      showToast(tEmoji(t),
+        `${t.train} approaching`,
+        `${t.dir==="SB"?"Southbound":"Northbound"} ${t.cat} in ~${Math.ceil(diff)} min at ${curStationName}`,
+        7000
+      );
+      // Also send browser notification if permitted
+      if (Notification && Notification.permission === "granted") {
+        try {
+          new Notification(`${tEmoji(t)} ${t.train}`, {
+            body: `${t.dir==="SB"?"↓ SB":"↑ NB"} ${t.cat} arriving at ${curStationName} in ~${Math.ceil(diff)} min`,
+            icon: "icon-192.png",
+            tag: id,
+          });
+        } catch(e) {}
+      }
+    }
+  }
+  // Reset notifications at midnight
+  if (sM < 1) notifiedTrains.clear();
+}
+
+// Request notification permission on first user interaction
+document.addEventListener("click", function reqNotif() {
+  if (Notification && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+  document.removeEventListener("click", reqNotif);
+}, {once: true});
+
+// ══════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ══════════════════════════════════════════════════════════
+document.addEventListener("keydown", function(e) {
+  // Skip if typing in an input
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") {
+    if (e.key === "Escape") { e.target.blur(); trainSearchEl.value = ""; searchQuery = ""; searchClearEl.className = ""; }
+    return;
+  }
+  switch(e.key) {
+    case "l": case "L": goLive(); showToast("📡", "Live Mode", "Switched to real-time", 2000); break;
+    case "f": case "F":
+      document.getElementById("btnFullscreen").click(); break;
+    case "w": case "W": toggleWeather(); break;
+    case "c": case "C": toggleCameras(); break;
+    case "x": case "X": document.getElementById("btnCrossings").click(); break;
+    case "h": case "H":
+      updateHistUI();
+      document.getElementById("historyPanel").classList.add("open"); break;
+    case "/":
+      e.preventDefault();
+      trainSearchEl.focus(); break;
+    case "0": setFilter("all", document.getElementById("fAll")); break;
+    case "1": setFilter("tri", document.getElementById("fTri")); break;
+    case "2": setFilter("amtrak", document.getElementById("fAmtrak")); break;
+    case "3": setFilter("brightline", document.getElementById("fBL")); break;
+    case "4": setFilter("fec", document.getElementById("fFec")); break;
+    case "5": setFilter("csx", document.getElementById("fCsx")); break;
+    case "?":
+      document.getElementById("kbdHelp").classList.toggle("open"); break;
+    case "Escape":
+      document.getElementById("kbdHelp").classList.remove("open");
+      document.getElementById("historyPanel").classList.remove("open");
+      document.getElementById("camFullscreen").classList.remove("open");
+      clearInterval(camFsInterval);
+      if (followId) stopFollow();
+      break;
+  }
+});
+
+// Wire up keyboard help button
+document.getElementById("kbdBtn").addEventListener("click", function() {
+  document.getElementById("kbdHelp").classList.toggle("open");
+});
+document.getElementById("kbdHelp").addEventListener("click", function(e) {
+  if (e.target === this) this.classList.remove("open");
+});
+
+// ══════════════════════════════════════════════════════════
+// AUTO-REFRESH COUNTDOWN
+// ══════════════════════════════════════════════════════════
+const REFRESH_INTERVAL = 30000; // matches the fetchAllLive interval
+const refreshProgress = document.getElementById("refreshProgress");
+
+setInterval(function() {
+  const elapsed = Date.now() - lastFetch;
+  const pct = Math.min(100, (elapsed / REFRESH_INTERVAL) * 100);
+  refreshProgress.style.width = pct + "%";
+  if (pct >= 100) refreshProgress.style.background = "#00ee77";
+  else refreshProgress.style.background = "#00d4ff";
+}, 500);
 
 // ══════════════════════════════════════════════════════════
 // WELCOME OVERLAY
