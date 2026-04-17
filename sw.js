@@ -1,7 +1,7 @@
 // Deerfield Rail Tracker — Service Worker
 // Caches all assets for offline use
 
-const CACHE = "deerfield-rail-v1";
+const CACHE = "deerfield-rail-v2";
 const ASSETS = [
   "/deerfield-rail/",
   "/deerfield-rail/index.html",

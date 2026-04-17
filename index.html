@@ -385,6 +385,61 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
 @media(min-width:900px){#stationPicker{font-size:12px;max-width:220px;top:42px;padding:6px 10px}}
 
 
+/* ── Toast notifications ── */
+#toastContainer{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:9500;
+  display:flex;flex-direction:column;gap:6px;pointer-events:none;width:90%;max-width:360px}
+.toast{background:rgba(11,16,32,.95);border:1px solid #1e2d4a;border-radius:8px;
+  padding:10px 16px;font-family:monospace;font-size:11px;color:#c8d6e5;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  box-shadow:0 4px 20px rgba(0,0,0,.6);animation:toastIn .3s ease;
+  display:flex;align-items:center;gap:8px;pointer-events:auto}
+.toast.success{border-color:#00ee77;color:#00ee77}
+.toast.error{border-color:#e63946;color:#e63946}
+.toast.warn{border-color:#f5a623;color:#f5a623}
+.toast.info{border-color:#60a5fa;color:#60a5fa}
+.toast-icon{font-size:16px;flex-shrink:0}
+.toast-msg{flex:1;color:#c8d6e5}
+@keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateY(-10px)}}
+
+/* ── Search bar ── */
+#searchWrap{padding:2px 8px;flex-shrink:0}
+#trainSearch{width:100%;background:#0b1020;border:1px solid #18243a;color:#c8d6e5;
+  padding:6px 10px 6px 28px;border-radius:6px;font-family:monospace;font-size:11px;
+  outline:none;transition:border-color .2s}
+#trainSearch:focus{border-color:#f5a623}
+#trainSearch::placeholder{color:#2a3a50}
+#searchIcon{position:absolute;left:18px;top:50%;transform:translateY(-50%);
+  font-size:12px;pointer-events:none;color:#2a3a50}
+@media(min-width:900px){
+  #searchWrap{padding:4px 16px}
+  #trainSearch{font-size:12px;padding:8px 12px 8px 32px}
+  #searchIcon{left:26px}
+}
+
+/* ── What's New / Changelog overlay ── */
+#changelogOverlay{display:none;position:fixed;inset:0;z-index:8500;background:rgba(0,0,0,.7);
+  align-items:center;justify-content:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#changelogOverlay.open{display:flex}
+#changelogBox{background:#0b1020;border:1px solid #1e2d4a;border-radius:14px;padding:24px;
+  max-width:420px;width:92%;font-family:'Courier New',monospace;color:#c8d6e5;
+  box-shadow:0 8px 40px rgba(0,0,0,.7);max-height:85vh;overflow-y:auto}
+#changelogBox h2{margin:0 0 4px;font-size:15px;color:#fff;letter-spacing:3px;text-align:center}
+#changelogBox .cl-version{font-size:10px;color:#f5a623;text-align:center;letter-spacing:2px;margin-bottom:14px}
+.cl-section{margin-bottom:14px}
+.cl-section h3{font-size:10px;color:#00d4ff;letter-spacing:2px;margin:0 0 6px;
+  border-bottom:1px solid #18243a;padding-bottom:4px}
+.cl-item{padding:4px 0;font-size:11px;display:flex;gap:8px;align-items:flex-start}
+.cl-item span.cl-icon{font-size:14px;flex-shrink:0;width:20px;text-align:center}
+.cl-item span.cl-txt{flex:1}
+.cl-item b{color:#fff}
+#changelogClose{display:block;width:100%;padding:10px;background:#182030;border:1px solid #2a3a50;
+  color:#c8d6e5;font-family:monospace;font-size:12px;letter-spacing:2px;border-radius:8px;
+  cursor:pointer;margin-top:12px}
+#versionBadge{font-size:8px;color:#3a5060;letter-spacing:1px;cursor:pointer;
+  transition:color .2s}
+#versionBadge:hover{color:#f5a623}
+
 .leaflet-popup-content-wrapper{background:#0a0e1a!important;border:1px solid #1e2d4a!important;
   border-radius:8px!important;box-shadow:0 4px 20px rgba(0,0,0,.8)!important;color:#c8d6e5!important}
 .leaflet-popup-content{margin:10px 13px!important;font-family:'Courier New',monospace!important}
@@ -435,6 +490,8 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
       <li><span class="wicon">⚠️</span><span class="wtxt"><b>FRA Crossing Data</b> — safety equipment, traffic counts, quiet zones &amp; accident reports</span></li>
       <li><span class="wicon">⛈</span><span class="wtxt"><b>Weather Alerts</b> — NWS severe weather warnings for the corridor in real time</span></li>
       <li><span class="wicon">🌧</span><span class="wtxt"><b>Rain Radar &amp; Maps</b> — satellite, OpenRailwayMap, street, dark mode &amp; precipitation</span></li>
+      <li><span class="wicon">🔍</span><span class="wtxt"><b>Train Search</b> — find any train by name, number, or operator instantly</span></li>
+      <li><span class="wicon">🌙</span><span class="wtxt"><b>Auto Night Mode</b> — map auto-switches to dark theme at sunset</span></li>
     </ul>
     <button id="welcomeBtn">LET'S GO</button>
     <label class="wcheck"><input type="checkbox" id="welcomeHide"> Don't show this again</label>
@@ -450,6 +507,40 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   <div class="cam-refresh">Live snapshot · auto-refreshes every 10s · tap anywhere to close</div>
 </div>
 
+<!-- TOAST NOTIFICATIONS -->
+<div id="toastContainer"></div>
+
+<!-- WHAT'S NEW / CHANGELOG -->
+<div id="changelogOverlay">
+  <div id="changelogBox">
+    <div style="text-align:center;font-size:32px;margin-bottom:6px">🚂</div>
+    <h2>WHAT'S NEW</h2>
+    <div class="cl-version">v2.1.0 — April 2026</div>
+    <div class="cl-section">
+      <h3>NEW FEATURES</h3>
+      <div class="cl-item"><span class="cl-icon">🔍</span><span class="cl-txt"><b>Train Search</b> — quickly find trains by name, number, or operator</span></div>
+      <div class="cl-item"><span class="cl-icon">🌙</span><span class="cl-txt"><b>Auto Night Mode</b> — map switches to dark theme at sunset and back at sunrise</span></div>
+      <div class="cl-item"><span class="cl-icon">🔔</span><span class="cl-txt"><b>Toast Notifications</b> — real-time status alerts for API connections and errors</span></div>
+      <div class="cl-item"><span class="cl-icon">⌨️</span><span class="cl-txt"><b>Keyboard Shortcuts</b> — ESC to close panels, quick navigation</span></div>
+    </div>
+    <div class="cl-section">
+      <h3>IMPROVEMENTS</h3>
+      <div class="cl-item"><span class="cl-icon">⚡</span><span class="cl-txt"><b>Faster Rendering</b> — train list only re-renders when data changes</span></div>
+      <div class="cl-item"><span class="cl-icon">📡</span><span class="cl-txt"><b>Better Error Handling</b> — clear feedback when APIs are unreachable</span></div>
+      <div class="cl-item"><span class="cl-icon">🎨</span><span class="cl-txt"><b>Version Badge</b> — app version displayed in header, tap to view changelog</span></div>
+    </div>
+    <div class="cl-section">
+      <h3>PREVIOUS (v2.0)</h3>
+      <div class="cl-item"><span class="cl-icon">📹</span><span class="cl-txt"><b>FDOT Cameras</b> — live traffic camera snapshots with fullscreen viewer</span></div>
+      <div class="cl-item"><span class="cl-icon">⚠️</span><span class="cl-txt"><b>FRA Crossings</b> — crossing safety data, quiet zones, accident reports</span></div>
+      <div class="cl-item"><span class="cl-icon">⛈</span><span class="cl-txt"><b>Weather Alerts</b> — NWS severe weather warnings for the corridor</span></div>
+      <div class="cl-item"><span class="cl-icon">📍</span><span class="cl-txt"><b>Station Picker</b> — 14 stations with adjusted arrival times</span></div>
+      <div class="cl-item"><span class="cl-icon">🎯</span><span class="cl-txt"><b>Follow Mode</b> — lock camera on any train across the map</span></div>
+    </div>
+    <button id="changelogClose">GOT IT</button>
+  </div>
+</div>
+
 <div id="app">
 
   <!-- HEADER — compact single row -->
@@ -457,6 +548,7 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
     <div class="hlogo">
       <div class="htitle">🚂 DEERFIELD RAIL</div>
       <div class="hsub">TRI-RAIL · AMTRAK · BRIGHTLINE · FEC · CSX</div>
+      <div id="versionBadge" title="What's New">v2.1.0</div>
     </div>
     <div id="clock">--:--:--</div>
     <div class="hbtns">
@@ -534,6 +626,10 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
       <div id="otbar">
         <div class="otlabel">● ON TRACK NOW</div>
         <div id="otchips"></div>
+      </div>
+      <div id="searchWrap" style="position:relative">
+        <span id="searchIcon">🔍</span>
+        <input id="trainSearch" type="text" placeholder="Search trains..." autocomplete="off" spellcheck="false"/>
       </div>
       <div id="filters">
         <button id="fAll"  class="on">All</button>
@@ -2053,7 +2149,15 @@ function render() {
   }
 
   // ── Next train (adjusted for selected station) ────────
-  const filt     = ALL.filter(t=>curFilter==="all"||t.type===curFilter);
+  const filt     = ALL.filter(t=>{
+    if (curFilter !== "all" && t.type !== curFilter) return false;
+    if (searchQuery) {
+      const q = searchQuery;
+      const hay = (t.train + " " + t.cat + " " + (t.dir||"")).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
   const withAdj  = filt.map(t=>({...t, adjMins:stationMins(t), adjTime:minsToTime(stationMins(t))}))
     .sort((a,b)=>a.adjMins-b.adjMins);
   const upcoming = withAdj.filter(t=>t.adjMins>sM);
@@ -2109,7 +2213,11 @@ function render() {
       </div>`;
     });
   }
-  document.getElementById("listscroll").innerHTML = html;
+  // Throttle list re-renders — only update DOM when content changes
+  if (html !== render._lastHtml) {
+    document.getElementById("listscroll").innerHTML = html;
+    render._lastHtml = html;
+  }
 
   requestAnimationFrame(render);
 }
@@ -2237,6 +2345,177 @@ function closeCamFullscreen() {
     if (e.target === overlay) overlay.classList.remove("open");
   });
 })();
+
+// ══════════════════════════════════════════════════════════
+// TOAST NOTIFICATION SYSTEM
+// ══════════════════════════════════════════════════════════
+function showToast(msg, type="info", durationMs=4000) {
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+  const icons = {success:"✅", error:"❌", warn:"⚠️", info:"ℹ️"};
+  const toast = document.createElement("div");
+  toast.className = "toast " + type;
+  toast.innerHTML = `<span class="toast-icon">${icons[type]||"ℹ️"}</span><span class="toast-msg">${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.animation = "toastOut .3s ease forwards";
+    setTimeout(() => toast.remove(), 300);
+  }, durationMs);
+}
+
+// ══════════════════════════════════════════════════════════
+// TRAIN SEARCH
+// ══════════════════════════════════════════════════════════
+let searchQuery = "";
+document.getElementById("trainSearch").addEventListener("input", function() {
+  searchQuery = this.value.trim().toLowerCase();
+});
+
+// ══════════════════════════════════════════════════════════
+// AUTO NIGHT MODE — sunrise/sunset for Deerfield Beach, FL
+// ══════════════════════════════════════════════════════════
+let nightModeAuto = true;
+let nightModeApplied = false;
+
+function getSunTimes() {
+  const now = new Date();
+  const doy = Math.floor((now - new Date(now.getFullYear(),0,0)) / 86400000);
+  const lat = 26.3168 * Math.PI / 180;
+  const decl = 23.45 * Math.sin(2 * Math.PI * (284 + doy) / 365) * Math.PI / 180;
+  const ha = Math.acos(-Math.tan(lat) * Math.tan(decl)) * 180 / Math.PI;
+  const noon = 12 - (-80.12 / 15) - (now.getTimezoneOffset() / 60);
+  return {
+    sunrise: noon - ha / 15,
+    sunset: noon + ha / 15
+  };
+}
+
+function checkNightMode() {
+  if (!nightModeAuto) return;
+  const now = new Date();
+  const hour = now.getHours() + now.getMinutes() / 60;
+  const {sunrise, sunset} = getSunTimes();
+  const isNight = hour < sunrise || hour > sunset;
+  if (isNight && !nightModeApplied) {
+    setLayer("dark");
+    nightModeApplied = true;
+    showToast("Night mode — switched to dark map", "info", 3000);
+  } else if (!isNight && nightModeApplied) {
+    setLayer("sat");
+    nightModeApplied = false;
+    showToast("Day mode — switched to satellite map", "info", 3000);
+  }
+}
+setTimeout(checkNightMode, 1500);
+setInterval(checkNightMode, 300000);
+
+// ══════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ══════════════════════════════════════════════════════════
+document.addEventListener("keydown", function(e) {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  if (e.key === "Escape") {
+    // Close overlays in priority order
+    if (document.getElementById("camFullscreen").classList.contains("open")) {
+      closeCamFullscreen(); return;
+    }
+    if (document.getElementById("historyPanel").classList.contains("open")) {
+      document.getElementById("historyPanel").classList.remove("open"); return;
+    }
+    if (document.getElementById("changelogOverlay").classList.contains("open")) {
+      document.getElementById("changelogOverlay").classList.remove("open"); return;
+    }
+    if (document.getElementById("welcomeOverlay").classList.contains("open")) {
+      document.getElementById("welcomeOverlay").classList.remove("open"); return;
+    }
+    if (document.getElementById("app").classList.contains("fullscreen-map")) {
+      document.getElementById("app").classList.remove("fullscreen-map");
+      document.getElementById("btnFullscreen").classList.remove("on");
+      document.getElementById("btnFullscreen").textContent = "⛶";
+      setTimeout(() => map.invalidateSize({animate:false}), 50);
+      return;
+    }
+    if (followId) { stopFollow(); return; }
+  }
+  if (e.key === "/" && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.getElementById("trainSearch").focus();
+  }
+});
+
+// ══════════════════════════════════════════════════════════
+// CHANGELOG / WHAT'S NEW
+// ══════════════════════════════════════════════════════════
+document.getElementById("versionBadge").addEventListener("click", function() {
+  document.getElementById("changelogOverlay").classList.add("open");
+});
+document.getElementById("changelogClose").addEventListener("click", function() {
+  document.getElementById("changelogOverlay").classList.remove("open");
+});
+document.getElementById("changelogOverlay").addEventListener("click", function(e) {
+  if (e.target === this) this.classList.remove("open");
+});
+
+// Show changelog on first visit for this version
+(function() {
+  const seenVer = localStorage.getItem("rail_changelog_seen");
+  if (seenVer !== "2.1.0") {
+    setTimeout(() => {
+      if (!document.getElementById("welcomeOverlay").classList.contains("open")) {
+        document.getElementById("changelogOverlay").classList.add("open");
+      }
+    }, 800);
+    localStorage.setItem("rail_changelog_seen", "2.1.0");
+  }
+})();
+
+// ══════════════════════════════════════════════════════════
+// ENHANCED API ERROR HANDLING WITH TOASTS
+// ══════════════════════════════════════════════════════════
+let _lastApiToast = 0;
+let _lastTriToast = 0;
+
+const _origFetchLive = fetchLive;
+fetchLive = async function() {
+  try {
+    const r = await fetch("https://api-v3.amtraker.com/v3/trains", {cache:"no-store"});
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+    const out = {};
+    for (const [num, trains] of Object.entries(data)) {
+      for (const t of trains) {
+        if (!t.lat || !t.lon) continue;
+        if (t.lat < MAP_S-1 || t.lat > MAP_N+1) continue;
+        const isBL = String(t.trainNum||"").startsWith("b");
+        const id   = "live_"+(t.trainID||num);
+        const dir  = ["S","SE","SW"].some(h=>(t.heading||"").startsWith(h))?"SB":"NB";
+        out[id] = {
+          lat:t.lat, lng:t.lon, heading:t.heading||"",
+          name: t.routeName||(isBL?"Brightline":"Amtrak"),
+          num:  String(t.trainNum||num),
+          type: isBL?"brightline":"amtrak",
+          dir, speed:t.velocity||0,
+          updated: t.updatedAt ? new Date(t.updatedAt) : new Date(),
+        };
+      }
+    }
+    liveData=out; apiGood=true; lastFetch=Date.now();
+    document.getElementById("apistatus").textContent="📡 LIVE GPS";
+    document.getElementById("apistatus").style.color="#00ee77";
+    if (_lastApiToast < 0) {
+      showToast("Amtraker API reconnected", "success", 3000);
+    }
+    _lastApiToast = Date.now();
+  } catch(e) {
+    apiGood=false;
+    document.getElementById("apistatus").textContent="📅 SCHEDULE";
+    document.getElementById("apistatus").style.color="#f5a623";
+    if (Date.now() - Math.abs(_lastApiToast) > 120000) {
+      showToast("Amtraker API unreachable — using schedules", "warn", 4000);
+      _lastApiToast = -Date.now();
+    }
+  }
+};
 </script>
 </body>
 </html>

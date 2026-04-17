@@ -73,3 +73,41 @@ The app will appear on your home screen like a native app — fullscreen, no bro
 
 Pure HTML/CSS/JS — zero frameworks, zero build tools.
 Leaflet.js for maps · protobuf.js for GTFS-RT decoding · Service Worker for offline · localStorage for settings & trip log.
+
+---
+
+## Changelog
+
+### v2.1.0 — April 2026
+
+**New Features**
+- **Train Search** — search bar to instantly find trains by name, number, or operator. Press `/` to focus.
+- **Auto Night Mode** — map automatically switches to dark theme at sunset and back to satellite at sunrise (based on Deerfield Beach coordinates).
+- **Toast Notifications** — non-intrusive status alerts when APIs connect/disconnect or errors occur.
+- **Keyboard Shortcuts** — `ESC` closes any open panel/overlay/fullscreen mode; `/` jumps to search.
+- **What's New Panel** — in-app changelog accessible via version badge in the header. Auto-shows on first visit after update.
+- **Version Badge** — app version displayed in header, tap to view full changelog.
+
+**Improvements**
+- **Throttled List Rendering** — train list only re-renders when content actually changes, reducing unnecessary DOM writes from 60fps to on-demand.
+- **Better API Error Handling** — toast notifications when Amtraker API is unreachable (with reconnection success message).
+- **Updated Welcome Overlay** — now includes Train Search and Auto Night Mode in the feature tour.
+- **Service Worker v2** — cache version bumped to ensure new assets are loaded on update.
+
+### v2.0.0 — March 2026
+
+**Features**
+- Live GPS tracking for Amtrak, Brightline, and Tri-Rail (GTFS-RT)
+- 5 rail operators: Tri-Rail, Amtrak, Brightline, FEC Freight, CSX Freight
+- 4 switchable map layers (Satellite, ORM, OSM, Dark)
+- Real OSM track geometry with fallback coordinates
+- FRA crossing inventory with safety data and quiet zones
+- FDOT traffic cameras with fullscreen viewer
+- NWS severe weather alerts
+- Rain radar overlay
+- Station picker with 14 stations
+- Follow mode for camera-locked train tracking
+- Trip log with auto-detection and CSV export
+- Cargo descriptions for all freight trains
+- PWA with offline support
+- Password-protected access
