@@ -384,6 +384,31 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
 #welcomeBox .wcheck input{accent-color:#f5a623}
 @media(min-width:900px){#stationPicker{font-size:12px;max-width:220px;top:42px;padding:6px 10px}}
 
+/* ── Toast notification ── */
+#toastContainer{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:8500;
+  display:flex;flex-direction:column;gap:6px;pointer-events:none;width:90%;max-width:360px}
+.toast{background:rgba(11,16,32,.95);border:1px solid #f5a623;border-radius:8px;
+  padding:10px 14px;font-family:'Courier New',monospace;font-size:11px;color:#c8d6e5;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 4px 20px rgba(0,0,0,.6);
+  animation:toastIn .3s ease-out;pointer-events:auto;display:flex;align-items:center;gap:8px}
+.toast .toast-icon{font-size:18px;flex-shrink:0}
+.toast .toast-body{flex:1;min-width:0}
+.toast .toast-title{color:#f5a623;font-weight:bold;font-size:10px;letter-spacing:1px}
+.toast .toast-msg{color:#c8d6e5;margin-top:2px}
+@keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateY(-10px)}}
+
+/* ── Weekend badge ── */
+.weekend-badge{display:inline-block;background:#a78bfa22;border:1px solid #a78bfa55;
+  color:#a78bfa;border-radius:3px;padding:1px 5px;font-size:7px;letter-spacing:1px;
+  font-weight:bold;margin-left:6px;vertical-align:middle}
+
+/* ── Night mode indicator ── */
+#nightBadge{position:absolute;bottom:90px;right:6px;z-index:1000;background:rgba(0,0,0,.75);
+  border:1px solid #6366f1;border-radius:5px;padding:3px 8px;font-size:8px;color:#6366f1;
+  font-family:monospace;letter-spacing:1px;pointer-events:none;display:none;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+
 
 .leaflet-popup-content-wrapper{background:#0a0e1a!important;border:1px solid #1e2d4a!important;
   border-radius:8px!important;box-shadow:0 4px 20px rgba(0,0,0,.8)!important;color:#c8d6e5!important}
@@ -435,6 +460,8 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
       <li><span class="wicon">⚠️</span><span class="wtxt"><b>FRA Crossing Data</b> — safety equipment, traffic counts, quiet zones &amp; accident reports</span></li>
       <li><span class="wicon">⛈</span><span class="wtxt"><b>Weather Alerts</b> — NWS severe weather warnings for the corridor in real time</span></li>
       <li><span class="wicon">🌧</span><span class="wtxt"><b>Rain Radar &amp; Maps</b> — satellite, OpenRailwayMap, street, dark mode &amp; precipitation</span></li>
+      <li><span class="wicon">🌙</span><span class="wtxt"><b>Night Mode</b> — auto-switches to dark map after sunset, back to satellite at sunrise</span></li>
+      <li><span class="wicon">🔔</span><span class="wtxt"><b>Train Alerts</b> — get notified when a train is 5 minutes from your station</span></li>
     </ul>
     <button id="welcomeBtn">LET'S GO</button>
     <label class="wcheck"><input type="checkbox" id="welcomeHide"> Don't show this again</label>
@@ -450,13 +477,14 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
   <div class="cam-refresh">Live snapshot · auto-refreshes every 10s · tap anywhere to close</div>
 </div>
 
+<div id="toastContainer"></div>
 <div id="app">
 
   <!-- HEADER — compact single row -->
   <div id="hdr">
     <div class="hlogo">
       <div class="htitle">🚂 DEERFIELD RAIL</div>
-      <div class="hsub">TRI-RAIL · AMTRAK · BRIGHTLINE · FEC · CSX</div>
+      <div class="hsub">TRI-RAIL · AMTRAK · BRIGHTLINE · FEC · CSX<span id="schedBadge"></span></div>
     </div>
     <div id="clock">--:--:--</div>
     <div class="hbtns">
@@ -492,6 +520,7 @@ button.on{background:#f5a623;border-color:#f5a623;color:#000;font-weight:bold}
         <button id="btnFullscreen" title="Fullscreen map">⛶</button>
       </div>
       <div id="followBadge">🎯 FOLLOWING — tap to stop</div>
+      <div id="nightBadge">🌙 NIGHT MODE</div>
       <select id="stationPicker"></select>
       <div id="layertoggle">
         <button id="btnOrm">🛤 ORM</button>
@@ -1173,7 +1202,11 @@ function putMarker(id, lat, lng, type, emoji, col, dir, isLive, popHtml, speed) 
     }).addTo(map);
     markers[id].on("click", () => selectTrain(id));
   } else {
-    markers[id].setLatLng([lat, lng]);
+    if (typeof animateMarker === "function") {
+      animateMarker(id, lat, lng);
+    } else {
+      markers[id].setLatLng([lat, lng]);
+    }
     markers[id].setIcon(icon);
   }
   markers[id].unbindPopup();
@@ -1580,30 +1613,49 @@ function toggleCameras() {
   }
 }
 
-// OpenWeatherMap precipitation tiles (free, no key needed for tile layer)
-// ══════════════════════════════════════════════════════════
-const weatherLayer = L.tileLayer(
-  "https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=YOUR_KEY",
-  {opacity:0.5, attribution:"© OpenWeatherMap", maxZoom:19}
-);
-// We use a free alternative that needs no key: RainViewer
-const rainLayer = L.tileLayer(
-  "https://tilecache.rainviewer.com/v2/radar/nowcast/256/{z}/{x}/{y}/2/1_1.png",
-  {opacity:0.55, attribution:"© RainViewer", maxZoom:15, tileSize:256}
-);
+// ── RainViewer live radar (fetches latest frame timestamp via API) ──
+let rainLayer = null;
 let weatherOn = false;
+let rainRefreshTimer = null;
 
-function toggleWeather() {
+async function getRainViewerUrl() {
+  try {
+    const r = await fetch("https://api.rainviewer.com/public/weather-maps.json", {signal: AbortSignal.timeout(8000)});
+    if (!r.ok) return null;
+    const data = await r.json();
+    const frames = data.radar?.past || [];
+    if (!frames.length) return null;
+    const latest = frames[frames.length - 1];
+    return `https://tilecache.rainviewer.com${latest.path}/256/{z}/{x}/{y}/2/1_1.png`;
+  } catch(e) { return null; }
+}
+
+async function updateRainLayer() {
+  const url = await getRainViewerUrl();
+  if (!url) return;
+  const newLayer = L.tileLayer(url, {opacity: 0.55, attribution: "© RainViewer", maxZoom: 15, tileSize: 256});
+  if (rainLayer && map.hasLayer(rainLayer)) {
+    map.removeLayer(rainLayer);
+    newLayer.addTo(map);
+  }
+  rainLayer = newLayer;
+}
+
+async function toggleWeather() {
   weatherOn = !weatherOn;
   const btn = document.getElementById("btnWeather");
   if (weatherOn) {
-    rainLayer.addTo(map);
     btn.classList.add("on");
     btn.textContent = "🌧 RAIN ●";
+    await updateRainLayer();
+    if (rainLayer) rainLayer.addTo(map);
+    clearInterval(rainRefreshTimer);
+    rainRefreshTimer = setInterval(updateRainLayer, 300000);
   } else {
-    if (map.hasLayer(rainLayer)) map.removeLayer(rainLayer);
+    if (rainLayer && map.hasLayer(rainLayer)) map.removeLayer(rainLayer);
     btn.classList.remove("on");
     btn.textContent = "🌧 RAIN";
+    clearInterval(rainRefreshTimer);
   }
 }
 
@@ -2031,6 +2083,9 @@ function render() {
   // Auto-log passing trains (feature 15)
   checkPassingTrains(sM);
 
+  // Train proximity alerts
+  if (isLive) checkProximityAlerts(sM);
+
   // ── On-track bar ───────────────────────────────────────
   const schOT   = ALL.filter(t=>onTrack(t,sM));
   const liveCnt = Object.keys(liveData).length;
@@ -2194,6 +2249,182 @@ if ("serviceWorker" in navigator &&
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js").catch(()=>{});
   });
+}
+
+// ══════════════════════════════════════════════════════════
+// TOAST NOTIFICATIONS
+// ══════════════════════════════════════════════════════════
+function showToast(icon, title, msg, duration) {
+  const container = document.getElementById("toastContainer");
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.innerHTML = `<div class="toast-icon">${icon}</div><div class="toast-body"><div class="toast-title">${title}</div><div class="toast-msg">${msg}</div></div>`;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.style.animation = "toastOut .3s ease-in forwards";
+    setTimeout(() => el.remove(), 300);
+  }, duration || 5000);
+}
+
+// ══════════════════════════════════════════════════════════
+// NIGHT MODE — auto-switch to dark map tiles after sunset
+// Uses simple solar calculation for South Florida (~26.3°N)
+// ══════════════════════════════════════════════════════════
+let nightModeActive = false;
+let userOverrodeLayer = false;
+
+function getSunTimes(date) {
+  const lat = 26.32, lng = -80.13;
+  const rad = Math.PI / 180;
+  const dayOfYear = Math.floor((date - new Date(date.getFullYear(),0,0)) / 86400000);
+  const decl = -23.45 * Math.cos(rad * 360/365 * (dayOfYear + 10));
+  const ha = Math.acos(-Math.tan(lat*rad) * Math.tan(decl*rad)) / rad;
+  const noon = 12 - lng/15 + (date.getTimezoneOffset()/60);
+  return { sunrise: noon - ha/15, sunset: noon + ha/15 };
+}
+
+function checkNightMode() {
+  if (userOverrodeLayer) return;
+  const now = new Date();
+  const h = now.getHours() + now.getMinutes()/60;
+  const {sunrise, sunset} = getSunTimes(now);
+  const isNight = h < sunrise || h > sunset;
+  const badge = document.getElementById("nightBadge");
+
+  if (isNight && !nightModeActive) {
+    nightModeActive = true;
+    setLayer("dark");
+    if (badge) badge.style.display = "block";
+    showToast("🌙", "NIGHT MODE", "Switched to dark map — sunset at " +
+      Math.floor(sunset) + ":" + String(Math.floor((sunset%1)*60)).padStart(2,"0"));
+  } else if (!isNight && nightModeActive) {
+    nightModeActive = false;
+    setLayer("sat");
+    if (badge) badge.style.display = "none";
+    showToast("☀️", "DAY MODE", "Switched to satellite map — sunrise at " +
+      Math.floor(sunrise) + ":" + String(Math.floor((sunrise%1)*60)).padStart(2,"0"));
+  }
+}
+
+// Override: if user manually picks a layer, disable auto-switch
+const origSetLayer = setLayer;
+setLayer = function(name) {
+  userOverrodeLayer = true;
+  const badge = document.getElementById("nightBadge");
+  if (badge) badge.style.display = "none";
+  origSetLayer(name);
+};
+
+checkNightMode();
+setInterval(checkNightMode, 60000);
+
+// ══════════════════════════════════════════════════════════
+// TRAIN PROXIMITY NOTIFICATIONS
+// Sends browser notification + in-app toast when a train
+// is approaching your selected station (within 5 minutes)
+// ══════════════════════════════════════════════════════════
+let notifPermission = Notification?.permission || "denied";
+let notifiedTrains = new Set();
+
+function requestNotifPermission() {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "default") {
+    Notification.requestPermission().then(p => { notifPermission = p; });
+  }
+}
+
+function sendTrainNotif(train, etaMin) {
+  const key = train.train + "_" + Math.floor(Date.now() / 300000);
+  if (notifiedTrains.has(key)) return;
+  notifiedTrains.add(key);
+
+  const dir = train.dir === "SB" ? "↓ Southbound" : "↑ Northbound";
+  const eta = Math.round(etaMin);
+  const msg = `${train.train} ${dir} — ${eta} min away`;
+
+  showToast("🚨", "TRAIN APPROACHING", msg, 8000);
+
+  if (notifPermission === "granted") {
+    try {
+      new Notification("🚂 " + train.train, {
+        body: `${dir} · ${eta} min to ${curStationName}\n${getCargo(train.train) || train.cat}`,
+        icon: "icon-192.png",
+        tag: key,
+        silent: false,
+      });
+    } catch(e) {}
+  }
+}
+
+function checkProximityAlerts(sM) {
+  for (const t of ALL) {
+    const adjM = stationMins(t);
+    let eta = adjM - sM;
+    if (eta < 0) eta += 1440;
+    if (eta > 0 && eta <= 5 && eta > 0.5) {
+      sendTrainNotif(t, eta);
+    }
+  }
+}
+
+requestNotifPermission();
+
+// ══════════════════════════════════════════════════════════
+// WEEKEND / WEEKDAY SCHEDULE AWARENESS
+// Tri-Rail runs reduced service on weekends. Mark the schedule
+// and show an indicator so users know which schedule is active.
+// ══════════════════════════════════════════════════════════
+function isWeekend() {
+  const d = new Date().getDay();
+  return d === 0 || d === 6;
+}
+
+function getScheduleLabel() {
+  const d = new Date().getDay();
+  if (d === 0) return "SUNDAY";
+  if (d === 6) return "SATURDAY";
+  return "WEEKDAY";
+}
+
+(function initScheduleBadge() {
+  const badge = document.getElementById("schedBadge");
+  if (!badge) return;
+  const label = getScheduleLabel();
+  if (label !== "WEEKDAY") {
+    badge.className = "weekend-badge";
+    badge.textContent = label + " SCHED";
+    showToast("📅", label + " SCHEDULE", "Tri-Rail runs reduced service on " + label.toLowerCase() + "s. Freight may also vary.", 6000);
+  }
+})();
+
+// ══════════════════════════════════════════════════════════
+// SMOOTH MARKER ANIMATION — interpolate train positions
+// instead of jumping between render frames
+// ══════════════════════════════════════════════════════════
+const markerTargets = {};
+
+function animateMarker(id, toLat, toLng) {
+  if (!markers[id]) return;
+  const cur = markers[id].getLatLng();
+  const fromLat = cur.lat, fromLng = cur.lng;
+  const dist = Math.hypot(toLat - fromLat, toLng - fromLng);
+  if (dist < 0.00001) return;
+  if (dist > 0.05) { markers[id].setLatLng([toLat, toLng]); return; }
+
+  if (markerTargets[id]) cancelAnimationFrame(markerTargets[id]);
+
+  const duration = 800;
+  const start = performance.now();
+  function step(ts) {
+    const t = Math.min(1, (ts - start) / duration);
+    const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+    markers[id].setLatLng([
+      fromLat + (toLat - fromLat) * ease,
+      fromLng + (toLng - fromLng) * ease
+    ]);
+    if (t < 1) markerTargets[id] = requestAnimationFrame(step);
+  }
+  markerTargets[id] = requestAnimationFrame(step);
 }
 
 // ══════════════════════════════════════════════════════════
