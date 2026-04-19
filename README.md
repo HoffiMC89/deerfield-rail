@@ -6,6 +6,19 @@ A live, mobile-optimized train tracker for the South Florida rail corridor — b
 
 ---
 
+## What's New
+
+### April 2026
+
+- 🌙 **Night mode auto-switch** — automatically switches to dark map tiles after sunset and back to satellite at sunrise, using solar position calculation for South Florida. Manual layer picks override it.
+- 🔔 **Train proximity alerts** — browser notifications + in-app toasts when a train is within 5 minutes of your selected station. Supports native push notifications on desktop/mobile.
+- 🌧 **Live RainViewer radar** — rain overlay now fetches the latest radar frame timestamp from the RainViewer API instead of using a static URL. Auto-refreshes every 5 minutes while active.
+- 📅 **Weekend schedule indicator** — detects Saturday/Sunday and shows a badge in the header, plus a toast warning about reduced Tri-Rail weekend service.
+- 🎞 **Smooth marker animation** — train markers now glide smoothly between positions instead of jumping, using eased interpolation over 800ms.
+- 🔔 **Toast notification system** — in-app notification toasts for night mode switches, approaching trains, and schedule alerts.
+
+---
+
 ## Features
 
 ### Live Tracking
@@ -14,12 +27,14 @@ A live, mobile-optimized train tracker for the South Florida rail corridor — b
 - 🚂 **All 5 operators** — Tri-Rail, Amtrak, Brightline, FEC Freight, CSX Freight
 - ⚡ **Speed display** — live mph on every train marker
 - 🎯 **Follow mode** — tap a train to lock the camera and follow it across the map
+- 🎞 **Smooth animation** — train markers glide between updates instead of jumping
 
 ### Map & Layers
 - 🛰 **Satellite / ORM / OSM / Dark maps** — switchable tile layers (satellite default)
 - 🛤 **Real track geometry** — OSM-sourced rail lines snapped to actual railroad positions (SFRC + FEC)
-- 🌧 **Rain radar** — live precipitation overlay from RainViewer
+- 🌧 **Rain radar** — live precipitation overlay from RainViewer with auto-refreshing timestamps
 - ⛶ **Fullscreen map** — toggle for distraction-free viewing
+- 🌙 **Night mode** — auto-switches to dark tiles after sunset, satellite at sunrise
 
 ### Safety & Infrastructure
 - ⚠️ **FRA Crossing Inventory** — federal crossing data with safety equipment, traffic counts, quiet zone status, and links to FRA accident reports
@@ -32,6 +47,12 @@ A live, mobile-optimized train tracker for the South Florida rail corridor — b
 - ⏱ **Adjusted arrival times** — schedule times recalculated based on your selected station
 - 📦 **Cargo info** — what each freight train is hauling
 - 🕐 **Trip log** — auto-logs every train that passes near your position with CSV export
+- 📅 **Weekend schedule** — detects weekends and shows reduced service indicator
+
+### Notifications & Alerts
+- 🔔 **Train proximity alerts** — notifies you when a train is 5 minutes from your station
+- 🔔 **Toast notifications** — in-app notification system for approaching trains, night mode, and schedule changes
+- 📲 **Browser push notifications** — native notifications on desktop and mobile (requires permission)
 
 ### App
 - 📱 **PWA** — installable on iPhone/Android home screen, works offline
